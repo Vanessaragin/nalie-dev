@@ -40,6 +40,36 @@ export default function ServiceFinancePage() {
 
   useEffect(() => {
     let active = true;
+    async function refreshPixKey() {
+      try {
+        const supabase = createClient({ detectSessionInUrl: false });
+        const { data } = await supabase
+          .from('site_branding')
+          .select('pix_key')
+          .eq('id', 'nalie-main')
+          .maybeSingle();
+        if (active)
+          setPixKey(data?.pix_key || 'Chave PIX não cadastrada');
+      } catch {
+        if (active) setPixKey('Chave PIX não cadastrada');
+      }
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refreshPixKey();
+    };
+    const timer = window.setInterval(() => void refreshPixKey(), 10000);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
     async function loadBilling() {
       try {
         const supabase = createClient({ detectSessionInUrl: false });

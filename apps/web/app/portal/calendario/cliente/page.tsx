@@ -19,6 +19,11 @@ const initialEvents: Array<{
   location: string;
 }> = [];
 
+function currentPeriod() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function googleCalendarUrl(
   day: string,
   time: string,
@@ -42,8 +47,16 @@ function googleCalendarUrl(
 export default function ClientCalendarPage() {
   const [events, setEvents] = useState(initialEvents);
   const [showForm, setShowForm] = useState(false);
-  const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7));
+  const [period, setPeriod] = useState(currentPeriod);
   const [notice, setNotice] = useState('');
+
+  function changeMonth(offset: number) {
+    const [year, month] = period.split('-').map(Number);
+    const date = new Date(year, month - 1 + offset, 1);
+    setPeriod(
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+    );
+  }
 
   useEffect(() => {
     let active = true;
@@ -269,15 +282,15 @@ export default function ClientCalendarPage() {
         <section className={styles.grid}>
           <article className={styles.calendar}>
             <div className={styles.calendarTitle}>
-              <button onClick={() => setPeriod('2025-05')}>‹</button>
+              <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">‹</button>
               <b>
-                {period === '2025-05'
-                  ? 'Maio de 2025'
-                  : period === '2025-04'
-                    ? 'Abril de 2025'
-                    : 'Junho de 2025'}
+                {new Intl.DateTimeFormat('pt-BR', {
+                  month: 'long',
+                  year: 'numeric',
+                  timeZone: 'UTC',
+                }).format(new Date(`${period}-01T12:00:00Z`))}
               </b>
-              <button onClick={() => setPeriod('2025-06')}>›</button>
+              <button onClick={() => changeMonth(1)} aria-label="Próximo mês">›</button>
             </div>
             <div className={styles.week}>
               {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (

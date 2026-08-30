@@ -148,19 +148,19 @@ export default function PaymentsPage() {
   }, []);
   async function savePixKey() {
     try {
-      const supabase = createClient({ detectSessionInUrl: false });
-      const { data: authData } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('site_branding')
-        .update({
-          pix_key: pixKey,
-          updated_by: authData.user?.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', 'nalie-main');
-      if (error) throw error;
+      const response = await fetch('/api/admin/site-branding', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pixKey }),
+      });
+      const result = (await response.json()) as {
+        pixKey?: string;
+        error?: string;
+      };
+      if (!response.ok || !result.pixKey) throw new Error(result.error);
+      setPixKey(result.pixKey);
       window.dispatchEvent(
-        new CustomEvent('nalie-pix-updated', { detail: pixKey }),
+        new CustomEvent('nalie-pix-updated', { detail: result.pixKey }),
       );
       setPixSaved(true);
     } catch {

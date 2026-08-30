@@ -10,7 +10,10 @@ import PortalNavigation from '../portal-navigation';
 import CompanySwitcher from '../../components/company-switcher';
 import { createClient } from '../../../lib/supabase/client';
 
-const days = Array.from({ length: 30 }, (_, index) => index + 1);
+function currentPeriod() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+}
 type Appointment = {
   day: number;
   time: string;
@@ -52,7 +55,7 @@ export default function CalendarPage() {
   const [calendarView, setCalendarView] = useState<'general' | 'personal'>(
     'general',
   );
-  const [period, setPeriod] = useState('2025-06');
+  const [period, setPeriod] = useState(currentPeriod);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [generalItems, setGeneralItems] = useState(appointments);
   const [personalItems, setPersonalItems] = useState(personalAppointments);
@@ -76,6 +79,11 @@ export default function CalendarPage() {
     (item) =>
       (priorityFilter === 'Todas' || item.priority === priorityFilter) &&
       (clientFilter === 'Todos' || item.client === clientFilter),
+  );
+  const [periodYear, periodMonth] = period.split('-').map(Number);
+  const days = Array.from(
+    { length: new Date(periodYear, periodMonth, 0).getDate() },
+    (_, index) => index + 1,
   );
   useEffect(() => {
     async function loadClientChoices() {
