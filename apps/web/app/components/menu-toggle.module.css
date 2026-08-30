@@ -18,3 +18,12 @@
 .toggle:hover {
   background: #ffe7ee;
 }
+@media (max-width: 760px) {
+  .toggle {
+    top: 16px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    z-index: 30;
+  }
+}

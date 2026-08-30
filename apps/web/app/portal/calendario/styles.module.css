@@ -714,6 +714,25 @@
   font-size: 13px;
 }
 @media (max-width: 720px) {
+  .appointmentForm {
+    padding: 17px;
+  }
+  .appointmentForm > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .appointmentForm .fullField {
+    grid-column: auto;
+  }
+  .appointmentForm > footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+  .appointmentForm > footer button {
+    width: 100%;
+  }
+  .calendarViews {
+    grid-template-columns: 1fr;
+  }
   .messages {
     grid-template-columns: 1fr;
   }

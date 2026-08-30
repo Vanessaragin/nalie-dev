@@ -375,3 +375,51 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+@media (max-width: 650px) {
+  .pixSettings,
+  .automation,
+  .metrics,
+  .chargeForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pixSettings > *,
+  .automation > *,
+  .chargeForm > * {
+    min-width: 0;
+  }
+  .pixSettings input,
+  .pixSettings button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .automation {
+    align-items: start;
+  }
+  .automation dl {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .automation dl div {
+    min-width: 0;
+  }
+  .payments {
+    padding: 16px;
+  }
+  .title,
+  .tableTools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .tableTools,
+  .tableTools label,
+  .tableTools select,
+  .tableTools input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .formActions {
+    flex-direction: column;
+  }
+}

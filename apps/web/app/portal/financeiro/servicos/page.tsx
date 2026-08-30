@@ -43,26 +43,23 @@ export default function ServiceFinancePage() {
     async function loadBilling() {
       try {
         const supabase = createClient({ detectSessionInUrl: false });
+        const brandingResult = await supabase
+          .from('site_branding')
+          .select('pix_key')
+          .eq('id', 'nalie-main')
+          .maybeSingle();
+        if (!active) return;
+        setPixKey(
+          brandingResult.data?.pix_key || 'Chave PIX não cadastrada',
+        );
         const { data: companyId } = await supabase.rpc('current_company_id');
         if (!companyId) return;
-        const [paymentsResult, brandingResult] = await Promise.all([
-          supabase
-            .from('service_payments')
-            .select('id,service_name,amount,due_date,paid_at,payment_status')
-            .eq('company_id', companyId)
-            .order('due_date', { ascending: false }),
-          supabase
-            .from('site_branding')
-            .select('pix_key')
-            .eq('id', 'nalie-main')
-            .maybeSingle(),
-        ]);
+        const paymentsResult = await supabase
+          .from('service_payments')
+          .select('id,service_name,amount,due_date,paid_at,payment_status')
+          .eq('company_id', companyId)
+          .order('due_date', { ascending: false });
         if (!active) return;
-        if (brandingResult.data?.pix_key) {
-          setPixKey(brandingResult.data.pix_key);
-        } else {
-          setPixKey('Chave PIX não cadastrada');
-        }
         if (paymentsResult.error) return;
         const currency = new Intl.NumberFormat('pt-BR', {
           style: 'currency',
@@ -135,6 +132,7 @@ export default function ServiceFinancePage() {
         }
       } catch {
         setPayments([]);
+        setPixKey('Chave PIX não cadastrada');
       }
     }
     void loadBilling();
@@ -236,7 +234,9 @@ export default function ServiceFinancePage() {
             <span>PRÓXIMA COBRANÇA</span>
             <h2>{nextPayment.plan}</h2>
             <p>
-              Vencimento em {nextPayment.due} · {nextPayment.value}
+              {nextPaymentId
+                ? `Vencimento em ${nextPayment.due} · ${nextPayment.value}`
+                : 'Nenhuma cobrança futura cadastrada.'}
             </p>
           </div>
           <span className={styles.pending}>{nextPayment.status}</span>
@@ -252,6 +252,7 @@ export default function ServiceFinancePage() {
             <code>{pixKey}</code>
             <button
               type="button"
+              disabled={pixKey === 'Chave PIX não cadastrada'}
               onClick={async () => {
                 await navigator.clipboard?.writeText(pixKey);
                 setCopied(true);

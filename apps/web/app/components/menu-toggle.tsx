@@ -10,7 +10,12 @@ export default function MenuToggle() {
       : document.body.classList.contains('menu-collapsed'),
   );
   useEffect(() => {
-    if (collapsed) return;
+    if (
+      collapsed ||
+      (typeof window.matchMedia === 'function' &&
+        window.matchMedia('(max-width: 760px)').matches)
+    )
+      return;
     let timer = window.setTimeout(() => {
       setCollapsed(true);
       document.body.classList.add('menu-collapsed');

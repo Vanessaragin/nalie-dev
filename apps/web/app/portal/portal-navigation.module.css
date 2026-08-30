@@ -83,3 +83,17 @@
   background: #f8c5d3;
   font-style: normal;
 }
+@media (max-width: 760px) {
+  .privateLabel {
+    margin-top: 14px;
+  }
+  .submenu {
+    margin-left: 16px;
+  }
+  .signOut {
+    width: fit-content;
+    min-height: 36px;
+    margin: 12px 0 0;
+    padding: 6px 12px 6px 7px;
+  }
+}

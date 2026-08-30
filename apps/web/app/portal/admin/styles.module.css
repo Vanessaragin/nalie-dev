@@ -1012,4 +1012,36 @@
   .reminderImage {
     width: 100%;
   }
+  .provisionForm,
+  .pagePermissionGrid,
+  .passwordPolicy,
+  .permissionList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .provisionForm > *,
+  .passwordPolicy > * {
+    min-width: 0;
+  }
+  .title,
+  .inputHubTitle,
+  .inviteResult {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .title button,
+  .auditLink,
+  .copyResetLink {
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
+  }
+  .activity li,
+  .events li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .activity li > :last-child,
+  .events li > :last-child {
+    grid-column: 2;
+  }
 }

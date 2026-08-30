@@ -222,4 +222,14 @@
     grid-template-columns: 1fr;
     display: grid;
   }
+  .pixKey,
+  .pixKey code,
+  .pixKey button {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .pixKey code {
+    overflow-wrap: anywhere;
+  }
 }
