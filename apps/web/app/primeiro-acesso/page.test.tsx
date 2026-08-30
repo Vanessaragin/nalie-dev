@@ -1,0 +1,107 @@
+import { render, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import FirstAccessPage from './page';
+
+const supabaseMocks = vi.hoisted(() => ({
+  verifyOtp: vi.fn(),
+  exchangeCodeForSession: vi.fn(),
+  setSession: vi.fn(),
+  getSession: vi.fn(),
+  updateUser: vi.fn(),
+}));
+
+vi.mock('../../lib/supabase/client', () => ({
+  createClient: () => ({ auth: supabaseMocks }),
+}));
+
+describe('FirstAccessPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, '', '/primeiro-acesso');
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
+  });
+
+  it('does not request a provisional password when the link is invalid', async () => {
+    render(<FirstAccessPage />);
+    expect(
+      screen.getByRole('heading', { name: 'Crie sua nova senha' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('Senha provisória')).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(/Solicite à administração da Nalie/),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText('E-mail do usuário')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Voltar para o login →' })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+  });
+
+  it('shows only password and confirmation for a valid token hash', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/primeiro-acesso?token_hash=token-real-de-teste&type=recovery',
+    );
+    supabaseMocks.verifyOtp.mockResolvedValue({ error: null });
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-id' } } },
+      error: null,
+    });
+
+    render(<FirstAccessPage />);
+
+    expect(await screen.findByLabelText('Nova senha')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirmar nova senha')).toBeInTheDocument();
+    expect(screen.queryByLabelText('E-mail do usuário')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Salvar nova senha e entrar' }),
+    ).toBeInTheDocument();
+  });
+
+  it('reuses an existing recovery session without consuming the token again', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/primeiro-acesso?token_hash=token-ja-validado&type=recovery',
+    );
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-id' } } },
+      error: null,
+    });
+
+    render(<FirstAccessPage />);
+
+    expect(await screen.findByLabelText('Nova senha')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirmar nova senha')).toBeInTheDocument();
+    expect(supabaseMocks.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it('consumes a one-use recovery token only once in Strict Mode', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/primeiro-acesso?token_hash=token-unico&type=recovery',
+    );
+    supabaseMocks.verifyOtp.mockResolvedValue({ error: null });
+    supabaseMocks.getSession
+      .mockResolvedValueOnce({ data: { session: null }, error: null })
+      .mockResolvedValue({
+        data: { session: { user: { id: 'user-id' } } },
+        error: null,
+      });
+
+    render(
+      <StrictMode>
+        <FirstAccessPage />
+      </StrictMode>,
+    );
+
+    expect(await screen.findByLabelText('Nova senha')).toBeInTheDocument();
+    expect(supabaseMocks.verifyOtp).toHaveBeenCalledTimes(1);
+  });
+});

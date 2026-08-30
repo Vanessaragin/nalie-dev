@@ -1,0 +1,197 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(420px, 0.8fr) 1.2fr;
+  background: #fff1f4;
+}
+.panel {
+  padding: 38px clamp(38px, 7vw, 110px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+.back {
+  position: absolute;
+  top: 34px;
+  left: 40px;
+  font-size: 12px;
+  color: #704457;
+}
+.brand {
+  display: block;
+  width: 270px;
+  height: 150px;
+  margin-bottom: 70px;
+  background: url('/nalie-logo.png') center / contain no-repeat;
+}
+.brand > * {
+  display: none;
+}
+.intro > small {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #8e6f7d;
+  font-weight: 700;
+}
+.intro h1 {
+  font:
+    42px Georgia,
+    serif;
+  margin: 16px 0 12px;
+}
+.intro p {
+  color: #704457;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 410px;
+}
+.panel form {
+  display: grid;
+  margin-top: 28px;
+  max-width: 430px;
+}
+.panel label {
+  font-size: 11px;
+  font-weight: 700;
+  margin: 15px 0 7px;
+}
+.panel input {
+  height: 50px;
+  border: 1px solid #f2d5de;
+  border-radius: 12px;
+  padding: 0 15px;
+  background: #fffdfe;
+  font: 14px Arial;
+  outline: none;
+}
+.panel input:focus {
+  border-color: #8e6f7d;
+  box-shadow: 0 0 0 3px #8e6f7d1c;
+}
+.panel button {
+  height: 50px;
+  border: 0;
+  border-radius: 13px;
+  background: #ea658d;
+  color: white;
+  font-weight: 700;
+  margin-top: 22px;
+  cursor: pointer;
+}
+.panel button:disabled {
+  opacity: 0.65;
+}
+.message {
+  font-size: 11px;
+  color: #704457;
+  background: #fff1f4;
+  border-radius: 10px;
+  padding: 11px;
+  margin: 12px 0 0;
+}
+.invite {
+  font-size: 10px;
+  color: #8e6f7d;
+  margin-top: 22px;
+  max-width: 430px;
+  text-align: center;
+}
+.firstAccess {
+  display: block;
+  max-width: 430px;
+  text-align: center;
+  color: #8e6f7d;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.visual {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #f2d5de, #f2d5de 58%, #f2d5de);
+}
+.portrait {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(145deg, #f2d5de8c, #f2d5de66 58%, #f2d5deb8),
+    url('/vanessa-login.jpeg') center 38% / cover no-repeat;
+  opacity: 0.68;
+  filter: saturate(0.82) contrast(0.94);
+  transform: scale(1.015);
+}
+.visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #f2d5de4d, transparent 35%, #f2d5de38);
+  pointer-events: none;
+}
+.quote {
+  width: min(520px, 70%);
+  background: #fffdfeb8;
+  border: 1px solid #fffdfe;
+  padding: 48px;
+  border-radius: 28px;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 60px #5a354818;
+  position: relative;
+  z-index: 2;
+}
+.quote > span {
+  font: 70px Georgia;
+  color: #8e6f7d;
+  line-height: 0.5;
+}
+.quote p {
+  font:
+    32px/1.25 Georgia,
+    serif;
+  margin: 24px 0;
+}
+.quote small {
+  color: #704457;
+}
+.security {
+  position: absolute;
+  bottom: 45px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: #fff1f4;
+  padding: 14px 18px;
+  border-radius: 15px;
+  color: #8e6f7d;
+  z-index: 3;
+}
+.security span b,
+.security span small {
+  display: block;
+  color: #5a3548;
+  font-size: 10px;
+}
+.security span small {
+  color: #704457;
+  margin-top: 4px;
+}
+@media (max-width: 800px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+  .panel {
+    min-height: 100vh;
+  }
+  .visual {
+    display: none;
+  }
+  .brand {
+    margin-top: 35px;
+    margin-bottom: 45px;
+  }
+  .intro h1 {
+    font-size: 36px;
+  }
+}

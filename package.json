@@ -1,0 +1,24 @@
+{
+  "name": "intelligence-platform",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@platform/web",
+    "build": "npm run build --workspace=@platform/web",
+    "check:production-env": "node scripts/check-production-env.mjs",
+    "lint": "npm run lint --workspaces --if-present && .venv/bin/python -m ruff check apps/api",
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present && PYTHONPATH=apps/api .venv/bin/python -m pytest apps/api/tests && bash tests/security/no-browser-service-role.sh",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

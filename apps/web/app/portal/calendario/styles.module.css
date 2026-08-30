@@ -1,0 +1,730 @@
+.content {
+  background: #fffafb;
+}
+.appointmentNotice {
+  margin: 18px 0 0;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background: #e6a5b8;
+  color: #623044;
+  font-weight: 800;
+}
+.appointmentForm {
+  margin-top: 22px;
+  padding: 22px;
+  border: 1px solid #e6a5b8;
+  border-radius: 13px;
+  background: linear-gradient(120deg, #ffe7ee, #ffe7ee);
+}
+.appointmentForm > header,
+.appointmentForm > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.appointmentForm > header b,
+.appointmentForm > header small {
+  display: block;
+}
+.appointmentForm > header b {
+  font-size: 18px;
+}
+.appointmentForm > header small {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.appointmentForm > header button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e6a5b8;
+  border-radius: 50%;
+  background: #fffafb;
+  font-size: 20px;
+}
+.appointmentForm > div {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 13px;
+  margin-top: 18px;
+}
+.appointmentForm label {
+  display: grid;
+  gap: 7px;
+  color: #623044;
+  font-size: 12px;
+  font-weight: 800;
+}
+.appointmentForm input,
+.appointmentForm select,
+.appointmentForm textarea {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  padding: 0 10px;
+  color: #623044;
+}
+
+.appointmentForm textarea {
+  resize: vertical;
+}
+
+.appointmentForm .fullField {
+  grid-column: 1 / -1;
+}
+.appointmentForm > footer {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.appointmentForm > footer button {
+  min-height: 41px;
+  padding: 0 16px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  font-weight: 800;
+}
+.appointmentForm > footer button:last-child {
+  border-color: #7c4b5e;
+  background: #f0789c;
+  color: #fffafb;
+}
+.clientPreview {
+  min-height: 44px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  color: #7c3450;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.calendarFilters {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(300px, 1.4fr) 190px auto;
+  gap: 14px;
+  align-items: end;
+  margin: 22px 0 18px;
+  padding: 18px 20px;
+  border: 1px solid #e6a5b8;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.calendarFilters b,
+.calendarFilters small {
+  display: block;
+}
+.calendarFilters small {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.calendarFilters label {
+  display: grid;
+  gap: 7px;
+  color: #623044;
+  font-size: 13px;
+  font-weight: 700;
+}
+.calendarFilters select,
+.calendarFilters button {
+  min-height: 42px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  padding: 0 12px;
+  color: #623044;
+}
+.noAppointments {
+  margin: 14px;
+  padding: 20px 14px;
+  border: 1px dashed #e6a5b8;
+  border-radius: 9px;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  text-align: center;
+  line-height: 1.5;
+}
+.calendarFilters button {
+  color: #7c3450;
+  font-weight: 800;
+}
+@media (max-width: 950px) {
+  .calendarFilters {
+    grid-template-columns: 1fr;
+  }
+}
+.owner {
+  padding: 14px;
+  margin-bottom: 15px;
+  background: #ffe7ee;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.owner > span {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #e6a5b8;
+  font-size: 21px;
+}
+.owner b,
+.owner small {
+  display: block;
+}
+.owner b {
+  font-size: 13px;
+  color: #7c3450;
+}
+.owner small {
+  font-size: 11px;
+  color: #7c4b5e;
+  margin-top: 4px;
+}
+.notice {
+  margin: 14px 0 18px;
+  background: #ffe7ee;
+  border: 1px solid #e6a5b8;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #7c4b5e;
+}
+.calendarViews {
+  display: grid;
+  grid-template-columns: 210px 210px 1fr;
+  gap: 10px;
+  margin-top: 28px;
+}
+.calendarViews > button,
+.calendarViews > div {
+  min-height: 65px;
+  border: 1px solid #e6a5b8;
+  border-radius: 10px;
+  background: #fffafb;
+  padding: 10px 13px;
+}
+.calendarViews > button {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  text-align: left;
+  color: #623044;
+}
+.calendarViews > button > span {
+  grid-row: 1 / 3;
+  width: 46px;
+  height: 46px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  font-size: 24px;
+}
+.calendarViews b,
+.calendarViews small {
+  display: block;
+}
+.calendarViews small {
+  color: #7c4b5e;
+  margin-top: 3px;
+}
+.calendarViews > div {
+  background: #ffe7ee;
+}
+.viewActive {
+  border-color: #7c4b5e !important;
+  background: #ffe7ee !important;
+  box-shadow: inset 0 0 0 1px #7c4b5e;
+}
+.notice b,
+.notice small {
+  display: block;
+}
+.notice b {
+  font-size: 9px;
+}
+.notice small {
+  font-size: 7.5px;
+  color: #7c3450;
+  margin-top: 4px;
+}
+.calendarGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 19px;
+}
+.calendar,
+.upcoming,
+.messages {
+  background: #fffafb;
+  border: 1px solid #e6a5b8;
+  border-radius: 11px;
+  box-shadow: 0 5px 14px #6230440b;
+}
+.calendar {
+  padding: 20px;
+  min-width: 0;
+}
+.calendarTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.calendarTitle b {
+  font-size: 12px;
+}
+.calendarTitle button,
+.title button {
+  border: 1px solid #e6a5b8;
+  background: #fffafb;
+  border-radius: 6px;
+  height: 28px;
+}
+.week,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.week {
+  margin-top: 16px;
+}
+.week span {
+  text-align: center;
+  font-size: 7px;
+  color: #7c4b5e;
+  padding: 8px;
+}
+.days {
+  border-left: 1px solid #e6a5b8;
+  border-top: 1px solid #e6a5b8;
+}
+.days button {
+  height: 72px;
+  border: 0;
+  border-right: 1px solid #e6a5b8;
+  border-bottom: 1px solid #e6a5b8;
+  background: #fffafb;
+  text-align: left;
+  padding: 8px;
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+.days button span {
+  font-size: 8px;
+}
+.days button i {
+  display: block;
+  margin-top: 14px;
+  border-radius: 8px;
+  padding: 4px;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  font-size: 6px;
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.days button:nth-child(10) i {
+  background: #fde2e4;
+  color: #a33e45;
+}
+.days button:nth-child(18) i {
+  background: #dff3e5;
+  color: #287a3f;
+}
+.hasEvent span {
+  font-weight: 700;
+}
+.selected {
+  box-shadow: inset 0 0 0 2px #7c4b5e;
+}
+.legend {
+  display: flex;
+  gap: 17px;
+  font-size: 7px;
+  margin-top: 14px;
+}
+.legend span:nth-child(1) {
+  color: #d16d72;
+}
+.legend span:nth-child(2) {
+  color: #d7a84d;
+}
+.legend span:nth-child(3) {
+  color: #65b87a;
+}
+.upcoming {
+  padding: 20px;
+}
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.title b,
+.title small {
+  display: block;
+}
+.title b {
+  font-size: 11px;
+}
+.title small {
+  font-size: 7px;
+  color: #7c4b5e;
+  margin-top: 4px;
+}
+.today {
+  font-size: 7px;
+  color: #7c4b5e;
+  font-weight: 700;
+  margin: 19px 0 8px;
+}
+.priorityFilter {
+  min-height: 32px;
+  border: 1px solid #e6a5b8;
+  border-radius: 7px;
+  background: #fffafb;
+  padding: 0 8px;
+  color: #623044;
+  font-weight: 700;
+}
+.showAllAppointments {
+  width: 100%;
+  min-height: 34px;
+  margin-bottom: 5px;
+  border: 1px solid #e6a5b8;
+  border-radius: 7px;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  font-weight: 800;
+}
+.upcoming > article {
+  display: grid;
+  grid-template-columns: 40px 8px 1fr auto auto;
+  gap: 9px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid #ffe7ee;
+}
+.upcoming article > strong {
+  font-size: 9px;
+}
+.upcoming article > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.upcoming article p {
+  margin: 0;
+}
+.upcoming article p b,
+.upcoming article p small {
+  display: block;
+}
+.upcoming article p b {
+  font-size: 8.5px;
+}
+.upcoming article p small {
+  font-size: 7px;
+  color: #7c4b5e;
+  margin-top: 4px;
+}
+.upcoming article > em {
+  font-style: normal;
+  font-size: 6.5px;
+  padding: 5px 7px;
+  border-radius: 9px;
+}
+.contactActions {
+  display: flex;
+  gap: 6px;
+}
+.contactActions a {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fffafb;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 700;
+}
+.contactActions img {
+  width: 21px;
+  height: 21px;
+  object-fit: contain;
+}
+.whatsapp {
+  background: #ffe7ee;
+}
+.email {
+  background: #ffe7ee;
+}
+.googleCalendar {
+  border: 1px solid #e6a5b8;
+  background: #fffafb;
+}
+.googleCalendar b {
+  color: #7c4b5e;
+  font-family: Arial, sans-serif;
+  font-size: 17px !important;
+  font-weight: 900;
+}
+.mileageReminder {
+  background: #ffe7ee;
+  margin: 5px -8px 0;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  border-radius: 8px;
+}
+@media (max-width: 900px) {
+  .calendarViews {
+    grid-template-columns: 1fr 1fr;
+  }
+  .calendarViews > div {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 620px) {
+  .calendarViews {
+    grid-template-columns: 1fr;
+  }
+  .calendarViews > div {
+    grid-column: auto;
+  }
+}
+.high {
+  background: #fde2e4 !important;
+  color: #a33e45 !important;
+}
+.medium {
+  background: #fff0c9 !important;
+  color: #8a5a00 !important;
+}
+.normal {
+  background: #dff3e5 !important;
+  color: #287a3f !important;
+}
+.suggestion {
+  display: flex;
+  gap: 9px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #ffe7ee;
+  border-radius: 8px;
+}
+.suggestion > span {
+  color: #7c4b5e;
+}
+.suggestion p {
+  margin: 0;
+}
+.suggestion b,
+.suggestion small {
+  display: block;
+}
+.suggestion b {
+  font-size: 8px;
+}
+.suggestion small {
+  font-size: 7px;
+  line-height: 1.5;
+  color: #7c4b5e;
+  margin-top: 4px;
+}
+.messages {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  min-height: 360px;
+  overflow: hidden;
+}
+.messages > aside {
+  border-right: 1px solid #e6a5b8;
+  padding: 19px;
+}
+.messages > aside > button {
+  width: 100%;
+  border: 0;
+  background: #fffafb;
+  border-radius: 8px;
+  padding: 11px;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 9px;
+  text-align: left;
+  align-items: center;
+}
+.messages > aside > button > span,
+.chatHeader > span {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  font-size: 8px;
+}
+.messages button p,
+.chatHeader p {
+  margin: 0;
+}
+.messages button b,
+.messages button small,
+.chatHeader b,
+.chatHeader small {
+  display: block;
+}
+.messages button b,
+.chatHeader b {
+  font-size: 8px;
+}
+.messages button small,
+.chatHeader small {
+  font-size: 7px;
+  color: #7c4b5e;
+  margin-top: 4px;
+}
+.messages button em {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f0789c;
+  color: #fffafb;
+  font-style: normal;
+  font-size: 6px;
+}
+.activeChat {
+  background: #ffe7ee !important;
+}
+.messages > article {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid #e6a5b8;
+}
+.chatBody {
+  padding: 20px;
+  background: #fffafb;
+}
+.received,
+.sent {
+  max-width: 65%;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 8.5px;
+  line-height: 1.5;
+  margin-bottom: 11px;
+}
+.received {
+  background: #ffe7ee;
+}
+.sent {
+  background: #f0789c;
+  color: #fffafb;
+  margin-left: auto;
+}
+.received small,
+.sent small {
+  display: block;
+  font-size: 6px;
+  margin-top: 6px;
+  opacity: 0.7;
+}
+.messages form {
+  display: flex;
+  gap: 9px;
+  padding: 14px;
+  border-top: 1px solid #e6a5b8;
+}
+.messages input {
+  flex: 1;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 8px;
+}
+.messages form button {
+  border: 0;
+  border-radius: 8px;
+  background: #ed376f;
+  color: #fffafb;
+  padding: 0 18px;
+  font-size: 8px;
+}
+@media (max-width: 1050px) {
+  .calendarGrid {
+    grid-template-columns: 1fr;
+  }
+  .messages {
+    grid-template-columns: 230px 1fr;
+  }
+}
+.content .week span,
+.content .legend,
+.content .today {
+  font-size: 11px;
+}
+.content .days button span,
+.content .upcoming article > strong,
+.content .upcoming article p small,
+.content .suggestion small,
+.content .messages button small,
+.content .chatHeader small {
+  font-size: 12px;
+}
+.content .days button i,
+.content .upcoming article > em {
+  font-size: 10px;
+}
+.content .title b,
+.content .upcoming article p b,
+.content .suggestion b,
+.content .messages button b,
+.content .chatHeader b {
+  font-size: 14px;
+}
+.content .received,
+.content .sent,
+.content .messages input,
+.content .messages form button {
+  font-size: 13px;
+}
+@media (max-width: 720px) {
+  .messages {
+    grid-template-columns: 1fr;
+  }
+  .messages > aside {
+    border-right: 0;
+    border-bottom: 1px solid #e6a5b8;
+  }
+  .days button {
+    height: 54px;
+  }
+  .days button i {
+    display: none;
+  }
+}

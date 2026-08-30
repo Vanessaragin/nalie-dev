@@ -1,0 +1,63 @@
+.accountCard {
+  position: relative;
+  overflow: visible;
+  border: 1px solid #e6a5b8;
+  border-radius: 11px;
+  background: #fffafb;
+}
+.accountCard > button {
+  width: 100%;
+  cursor: pointer;
+}
+.companyIdentity {
+  min-width: 0;
+  padding-right: 24px;
+  text-align: left;
+}
+.companyIdentity b,
+.companyIdentity small {
+  display: block;
+}
+.companyIdentity b {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.companyIdentity small {
+  margin-top: 7px;
+  color: #7c4b5e;
+  font-size: 9px;
+  line-height: 1.2;
+}
+.accountCard [role='dialog'] a {
+  color: #7c4b5e;
+  font-size: 11px;
+  text-decoration: none;
+}
+.selector {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #dedbe9;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 14px 35px #25253b24;
+}
+.selector button {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff7f9;
+  color: #623044;
+  text-align: left;
+  cursor: pointer;
+}

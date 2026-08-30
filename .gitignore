@@ -1,0 +1,17 @@
+node_modules/
+.npm-cache/
+.next/
+.next-dev/
+dist/
+coverage/
+*.tsbuildinfo
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+.env
+.env.*
+!.env.example
+.DS_Store
+supabase/.temp/

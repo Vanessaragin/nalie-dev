@@ -1,0 +1,14 @@
+.field select {
+  height: 46px;
+  padding: 0 38px 0 15px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  color: #623044;
+  font: inherit;
+  cursor: pointer;
+}
+.compact select {
+  height: 34px;
+  font-size: 11px;
+}

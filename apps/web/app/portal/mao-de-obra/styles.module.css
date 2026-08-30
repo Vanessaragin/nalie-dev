@@ -1,0 +1,372 @@
+.content {
+  background: #fffafb;
+}
+.segment {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin: 28px 0 18px;
+  padding: 16px 19px;
+  border: 1px solid #e6a5b8;
+  border-radius: 12px;
+  background: linear-gradient(100deg, #ffe7ee, #ffe7ee);
+  font-size: 25px;
+}
+.segment b,
+.segment span {
+  display: block;
+  font-size: 13px;
+}
+.segment span {
+  color: #7c4b5e;
+  margin-top: 4px;
+}
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.summary article,
+.chart,
+.insight,
+.team,
+.staffing,
+.capacity {
+  border: 1px solid #e6a5b8;
+  border-radius: 12px;
+  background: #fffafb;
+  box-shadow: 0 5px 16px #6230440c;
+}
+.capacity {
+  margin: 20px 0;
+  padding: 22px;
+}
+.capacityInputs {
+  display: flex;
+  gap: 10px;
+}
+.capacityInputs label {
+  display: grid;
+  gap: 5px;
+  color: #7c4b5e;
+  font-size: 10px;
+}
+.capacityInputs input {
+  width: 76px;
+  height: 35px;
+  border: 1px solid #e6a5b8;
+  border-radius: 7px;
+  padding: 0 8px;
+}
+.capacityCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 13px;
+  margin-top: 18px;
+}
+.capacityCards article {
+  padding: 16px;
+  border-radius: 10px;
+  background: #ffe7ee;
+}
+.capacityCards span,
+.capacityCards strong,
+.capacityCards small {
+  display: block;
+}
+.capacityCards span,
+.capacityCards small {
+  color: #7c4b5e;
+}
+.capacityCards strong {
+  margin: 9px 0;
+  font-size: 24px;
+}
+.capacityOk,
+.capacityAlert {
+  margin: 15px 0 0;
+  padding: 11px;
+  border-radius: 8px;
+  font-weight: 800;
+}
+.capacityOk {
+  background: #e6a5b8;
+  color: #623044;
+}
+.capacityAlert {
+  background: #fde2e4;
+  color: #a33e45;
+}
+.staffing {
+  margin: 20px 0;
+  padding: 22px;
+}
+.minimumTotal {
+  padding: 9px 13px;
+  border-radius: 18px;
+  background: #ffe7ee;
+  color: #7c3450;
+  font-weight: 800;
+}
+.staffingGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+.staffingGrid article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #e6a5b8;
+  border-radius: 10px;
+  background: #fffafb;
+}
+.staffingGrid b,
+.staffingGrid small {
+  display: block;
+}
+.staffingGrid small {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.staffingGrid label {
+  display: grid;
+  gap: 4px;
+  color: #7c4b5e;
+  font-size: 10px;
+}
+.staffingGrid input {
+  width: 58px;
+  height: 34px;
+  border: 1px solid #e6a5b8;
+  border-radius: 7px;
+  text-align: center;
+  font-weight: 800;
+}
+.staffingGrid strong {
+  grid-column: 1 / -1;
+  padding-top: 9px;
+  border-top: 1px solid #e6a5b8;
+}
+.covered {
+  color: #623044;
+}
+.shortage {
+  color: #d16d72;
+}
+.addRole {
+  margin-top: 14px;
+  border: 0;
+  background: transparent;
+  color: #7c4b5e;
+  font-weight: 800;
+}
+.summary article {
+  padding: 20px;
+}
+.summary span,
+.summary strong,
+.summary small {
+  display: block;
+}
+.summary span,
+.summary small {
+  color: #7c4b5e;
+}
+.summary strong {
+  margin: 11px 0;
+  font-size: 23px;
+}
+.summary small {
+  color: #65b87a;
+}
+.form {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.7fr 0.9fr auto auto;
+  gap: 10px;
+  align-items: end;
+  margin: 18px 0;
+  padding: 17px;
+  border: 1px solid #e6a5b8;
+  border-radius: 11px;
+  background: #ffe7ee;
+}
+.form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+.form input,
+.form select,
+.form button,
+.title select {
+  height: 40px;
+  border: 1px solid #e6a5b8;
+  border-radius: 7px;
+  padding: 0 10px;
+  background: #fffafb;
+}
+.form button {
+  border: 0;
+  background: #f0789c;
+  color: #fffafb;
+}
+.form button:last-child {
+  background: #fffafb;
+  color: #7c3450;
+  border: 1px solid #e6a5b8;
+}
+.mainGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  margin: 20px 0;
+}
+.chart,
+.insight,
+.team {
+  padding: 22px;
+}
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.title b,
+.title small {
+  display: block;
+}
+.title small {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.bars {
+  display: flex;
+  height: 235px;
+  align-items: end;
+  justify-content: space-around;
+  gap: 22px;
+  padding: 34px 18px 0;
+  border-bottom: 1px solid #e6a5b8;
+}
+.bars div {
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+  gap: 6px;
+}
+.bars i {
+  width: 60%;
+  min-height: 15px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(#ed376f, #7c4b5e);
+}
+.bars b {
+  font-size: 11px;
+}
+.bars span {
+  color: #7c3450;
+}
+.insight {
+  background: linear-gradient(145deg, #ffe7ee, #ffe7ee);
+}
+.insight > span {
+  color: #7c4b5e;
+  font-weight: 800;
+  font-size: 10px;
+}
+.insight h2 {
+  margin: 23px 0 8px;
+  font-size: 29px;
+}
+.insight p {
+  color: #7c3450;
+  line-height: 1.6;
+}
+.insight hr {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid #e6a5b8;
+}
+.team {
+  margin-bottom: 30px;
+}
+.table {
+  margin-top: 17px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 2fr 0.7fr 1fr 1fr 0.7fr;
+  gap: 12px;
+  align-items: center;
+  min-height: 57px;
+  padding: 8px 10px;
+  border-top: 1px solid #e6a5b8;
+}
+.row:first-child {
+  min-height: 38px;
+  color: #7c4b5e;
+}
+.row strong,
+.row small {
+  display: block;
+}
+.row small {
+  margin-top: 4px;
+  color: #7c4b5e;
+}
+.row button {
+  border: 0;
+  border-radius: 15px;
+  padding: 7px 10px;
+  font-weight: 700;
+}
+.active {
+  color: #623044;
+  background: #ffe7ee;
+}
+.inactive {
+  color: #7c3450;
+  background: #ffe7ee;
+}
+@media (max-width: 1000px) {
+  .summary {
+    grid-template-columns: 1fr 1fr;
+  }
+  .form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+  .staffingGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .capacityCards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 650px) {
+  .summary,
+  .form {
+    grid-template-columns: 1fr;
+  }
+  .row {
+    grid-template-columns: 1.5fr 1fr 1fr;
+  }
+  .row > *:nth-child(4) {
+    display: none;
+  }
+  .staffingGrid {
+    grid-template-columns: 1fr;
+  }
+  .capacityCards {
+    grid-template-columns: 1fr;
+  }
+}

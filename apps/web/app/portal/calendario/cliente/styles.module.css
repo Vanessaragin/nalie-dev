@@ -1,0 +1,298 @@
+.content {
+  background: #fffafb;
+}
+.rules {
+  margin: 28px 0 18px;
+  padding: 15px 17px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid #e6a5b8;
+  border-radius: 10px;
+  background: #ffe7ee;
+}
+.paymentReminder {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 0 20px;
+  padding: 16px 18px;
+  border: 1px solid #f8c5d3;
+  border-radius: 11px;
+  background: #ffe7ee;
+}
+.paymentReminder > span {
+  font-size: 22px;
+}
+.paymentReminder p {
+  margin: 5px 0 0;
+  color: #7c3450;
+}
+.paymentReminder button {
+  margin-left: auto;
+  min-width: 100px;
+  height: 36px;
+  border: 1px solid #d7a84d;
+  border-radius: 8px;
+  background: #fffafb;
+  color: #623044;
+}
+.rules > span {
+  font-size: 22px;
+}
+.rules p {
+  margin: 5px 0 0;
+  color: #7c3450;
+}
+.eventForm {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid #e6a5b8;
+  border-radius: 10px;
+  background: #fffafb;
+}
+.eventForm label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+.eventForm input,
+.eventForm select,
+.eventForm textarea,
+.eventForm button {
+  height: 40px;
+  border-radius: 7px;
+}
+.eventForm input,
+.eventForm select,
+.eventForm textarea {
+  border: 1px solid #e6a5b8;
+  padding: 0 10px;
+}
+
+.eventForm textarea {
+  resize: vertical;
+}
+.eventForm button {
+  border: 0;
+  background: #f0789c;
+  color: #fffafb;
+  padding: 0 15px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+.calendar,
+.upcoming,
+.chat {
+  background: #fffafb;
+  border: 1px solid #e6a5b8;
+  border-radius: 11px;
+  box-shadow: 0 5px 14px #6230440c;
+}
+.calendar {
+  padding: 20px;
+  min-width: 0;
+}
+.calendarTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.calendarTitle button {
+  width: 32px;
+  height: 30px;
+  border: 1px solid #e6a5b8;
+  border-radius: 7px;
+  background: #fffafb;
+}
+.week,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.week {
+  margin-top: 14px;
+}
+.week span {
+  padding: 8px;
+  text-align: center;
+  color: #7c4b5e;
+}
+.days {
+  border-left: 1px solid #e6a5b8;
+  border-top: 1px solid #e6a5b8;
+}
+.days > div {
+  position: relative;
+  min-height: 76px;
+  padding: 7px;
+  border-right: 1px solid #e6a5b8;
+  border-bottom: 1px solid #e6a5b8;
+  min-width: 0;
+  overflow: hidden;
+}
+.days small {
+  display: block;
+  margin-top: 7px;
+  padding: 4px;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.billing {
+  background: #e6a5b8;
+  color: #7c3450;
+}
+.vanessa {
+  background: #ffe7ee;
+  color: #7c3450;
+}
+.company {
+  background: #e6a5b8;
+  color: #623044;
+}
+.upcoming {
+  padding: 20px;
+}
+.title b,
+.title small {
+  display: block;
+}
+.title small {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.upcoming article {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid #ffe7ee;
+}
+.googleCalendar {
+  align-self: center;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #e6a5b8;
+  border-radius: 50%;
+  background: #fffafb;
+  text-decoration: none;
+}
+.googleCalendar b {
+  color: #7c4b5e;
+  font-family: Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 900;
+}
+.upcoming article p {
+  margin: 0;
+}
+.upcoming article b,
+.upcoming article small {
+  display: block;
+}
+.upcoming article small,
+.upcoming time {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.chat {
+  margin-top: 18px;
+  overflow: hidden;
+}
+.chatHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 15px 18px;
+  border-bottom: 1px solid #ffe7ee;
+}
+.chatHead > span {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e6a5b8;
+  color: #7c3450;
+}
+.chatHead p {
+  margin: 0;
+  flex: 1;
+}
+.chatHead b,
+.chatHead small {
+  display: block;
+}
+.chatHead em {
+  padding: 6px 9px;
+  border-radius: 12px;
+  background: #ffe7ee;
+  color: #623044;
+  font-style: normal;
+}
+.messages {
+  min-height: 130px;
+  padding: 18px;
+  background: #fffafb;
+}
+.messages p {
+  width: fit-content;
+  max-width: 70%;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: #fffafb;
+  box-shadow: 0 2px 8px #6230440c;
+}
+.messages small {
+  display: block;
+  margin-top: 6px;
+  color: #7c4b5e;
+}
+.messages .own {
+  margin-left: auto;
+  background: #f0789c;
+  color: #fffafb;
+}
+.chat form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 14px;
+}
+.chat input {
+  height: 42px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  padding: 0 11px;
+}
+.chat form button {
+  border: 0;
+  border-radius: 8px;
+  background: #ed376f;
+  color: #fffafb;
+  padding: 0 18px;
+}
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .eventForm {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .eventForm {
+    grid-template-columns: 1fr;
+  }
+}

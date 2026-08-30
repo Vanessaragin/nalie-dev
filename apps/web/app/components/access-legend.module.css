@@ -1,0 +1,19 @@
+.legend {
+  display: flex;
+  gap: 8px;
+  margin: 9px 3px 0;
+  padding: 8px 9px;
+  border-radius: 7px;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  font-size: 7px;
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.legend i {
+  color: #7c4b5e;
+  font-style: normal;
+}

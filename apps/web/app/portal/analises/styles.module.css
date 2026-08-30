@@ -1,0 +1,713 @@
+.content {
+  background: #fffafb;
+}
+.analysisNavGroup > a em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 16px;
+}
+.analysisSubmenu {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 8px 20px;
+  padding-left: 8px;
+  border-left: 2px solid #e6a5b8;
+}
+.analysisSubmenu button,
+.analysisSubmenu > a {
+  min-height: 37px !important;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 9px !important;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #7c3450 !important;
+  text-align: left;
+  font-size: 12px !important;
+  line-height: 1.3;
+  font-weight: 400;
+  cursor: pointer;
+  text-decoration: none;
+}
+.analysisSubmenu button i,
+.analysisSubmenu > a i {
+  width: 26px !important;
+  height: 26px !important;
+  flex: 0 0 26px !important;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1px solid #e6a5b8;
+  background: #ffe7ee !important;
+  color: #7c4b5e;
+  font-size: 13px !important;
+  font-style: normal;
+}
+.analysisSubmenu button.subActive {
+  background: #ffe7ee;
+  color: #7c3450 !important;
+  font-weight: 400;
+}
+.analysisSubmenu button.subActive i {
+  background: #e6a5b8;
+}
+.eyebrow {
+  color: #7c4b5e;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.contextBar {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, 1fr);
+  gap: 1px;
+  margin: 26px 0 18px;
+  overflow: hidden;
+  border: 1px solid #e6a5b8;
+  border-radius: 13px;
+  background: #e6a5b8;
+}
+.contextBar div {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  background: #fffafb;
+}
+.contextBar small,
+.summaryGrid small {
+  color: #7c4b5e;
+}
+.open {
+  color: #65b87a;
+}
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.summaryGrid article {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #e6a5b8;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.summaryGrid article > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  font-size: 21px;
+  font-weight: 900;
+}
+.summaryGrid b,
+.summaryGrid small {
+  display: block;
+}
+.summaryGrid small {
+  margin-top: 5px;
+}
+.periodFilters {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  margin: 20px 0 12px;
+  padding: 16px;
+  border: 1px solid #e6a5b8;
+  border-radius: 13px;
+  background: #fffafb;
+}
+.periodFilters > div {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+}
+.periodFilters small,
+.periodFilters label,
+.financialDetails p,
+.detailRow small {
+  color: #7c4b5e;
+}
+.periodFilters label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.periodFilters input {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fff;
+  color: #623044;
+}
+.financialDetails {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.financialDetails article {
+  padding: 18px;
+  border: 1px solid #e6a5b8;
+  border-radius: 13px;
+  background: #fffafb;
+}
+.financialDetails h2 {
+  margin: 0 0 14px;
+  font-size: 17px;
+}
+.detailRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid #f4ced9;
+  font-size: 13px;
+}
+.detailRow span:last-child {
+  text-align: right;
+}
+.detailRow .income {
+  color: #3b8b58;
+}
+.overviewPanel {
+  display: grid;
+  grid-template-columns: 0.8fr 1.4fr;
+  gap: 25px;
+  margin-top: 20px;
+  padding: 25px;
+  border: 1px solid #e6a5b8;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #ffe7ee, #ffe7ee);
+}
+.overviewPanel > div:first-child > span {
+  color: #7c4b5e;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+.overviewPanel h2 {
+  margin: 9px 0;
+}
+.overviewPanel p {
+  color: #7c4b5e;
+  line-height: 1.55;
+}
+.overviewSteps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.overviewSteps button {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 9px;
+  align-items: center;
+  min-height: 68px;
+  padding: 12px;
+  border: 1px solid #e6a5b8;
+  border-radius: 10px;
+  background: #fffafb;
+  color: #623044;
+  text-align: left;
+  cursor: pointer;
+}
+.overviewSteps button > span {
+  color: #7c4b5e;
+  font-weight: 900;
+}
+.overviewSteps button i {
+  font-style: normal;
+  color: #7c4b5e;
+}
+.overviewSteps button em {
+  font-style: normal;
+  color: #7c4b5e;
+}
+.panel {
+  margin-top: 16px;
+  padding: 22px;
+  border: 1px solid #e6a5b8;
+  border-radius: 13px;
+  background: #fffafb;
+}
+.panelTitle {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.panelTitle h2,
+.panelTitle p {
+  margin: 0;
+}
+.panelTitle p {
+  margin-top: 7px;
+  color: #7c4b5e;
+}
+.panelTitle button,
+.contentGrid button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #f0789c;
+  color: #fffafb;
+  font-weight: 800;
+}
+.finding {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 17px 0;
+  border-top: 1px solid #e6a5b8;
+}
+.findingIcon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #ffe7ee;
+  color: #7c4b5e;
+}
+.finding h3,
+.finding p {
+  margin: 0;
+}
+.finding p {
+  margin-top: 6px;
+  color: #7c4b5e;
+}
+.impact,
+.status {
+  padding: 6px 9px;
+  border-radius: 20px;
+  background: #ffe7ee;
+  font-size: 12px;
+  font-weight: 800;
+}
+.status {
+  background: #ffe7ee;
+  color: #623044;
+}
+.finding button {
+  border: 0;
+  background: transparent;
+  color: #7c4b5e;
+  font-weight: 900;
+}
+.decision {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr);
+  gap: 18px;
+  padding: 20px;
+  border-radius: 11px;
+  background: linear-gradient(110deg, #ffe7ee, #ffe7ee);
+}
+.decision small,
+.decision b {
+  display: block;
+}
+.decision small {
+  margin-bottom: 7px;
+  color: #7c4b5e;
+  font-weight: 800;
+}
+.decision h3,
+.decision p {
+  margin: 0;
+}
+.decision p {
+  margin-top: 7px;
+  color: #7c4b5e;
+}
+.historyRow {
+  display: grid;
+  grid-template-columns: 120px 180px 1fr 170px;
+  gap: 15px;
+  align-items: center;
+  min-height: 57px;
+  border-top: 1px solid #e6a5b8;
+}
+.historyRow time,
+.historyRow small {
+  color: #7c4b5e;
+}
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 18px;
+}
+.biWorkspace {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid #e6a5b8;
+  border-radius: 14px;
+  background: #fffafb;
+}
+.biHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+.biHeader h2,
+.biHeader p {
+  margin: 0;
+}
+.biHeader p {
+  margin-top: 6px;
+  color: #7c4b5e;
+}
+.biHeader label {
+  display: grid;
+  gap: 6px;
+  font-weight: 800;
+}
+.biHeader select {
+  min-width: 270px;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+}
+.privateBadge {
+  max-width: 330px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: #ffe7ee;
+  color: #7c4b5e;
+  font-weight: 800;
+  text-align: center;
+}
+.companyFilter {
+  display: grid;
+  gap: 6px;
+  min-width: 280px;
+  color: #623044;
+  font-weight: 800;
+}
+.companyFilter select {
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  color: #623044;
+}
+.embedSettings {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+  margin: 16px 0;
+  padding: 15px;
+  border-radius: 11px;
+  background: #ffe7ee;
+}
+.embedSettings label {
+  display: grid;
+  gap: 6px;
+  font-weight: 800;
+}
+.embedSettings input {
+  height: 42px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+}
+.embedSettings button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #f0789c;
+  color: #fffafb;
+  font-weight: 800;
+}
+.embedSettings .clearButton {
+  border: 1px solid #e6a5b8;
+  background: #fffafb;
+  color: #7c4b5e;
+}
+.embedSettings .accessCheck {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.accessCheck input {
+  width: 18px;
+  height: 18px;
+}
+.biFrame {
+  width: 100%;
+  height: min(68vh, 760px);
+  min-height: 520px;
+  border: 1px solid #e6a5b8;
+  border-radius: 12px;
+  background: #ffe7ee;
+}
+.biEmpty {
+  min-height: 520px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 30px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffe7ee, #ffe7ee);
+  text-align: center;
+}
+.biEmpty span {
+  font-size: 46px;
+}
+.biEmpty p {
+  max-width: 560px;
+  color: #7c3450;
+  line-height: 1.6;
+}
+.presentationPanel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #e6a5b8;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.presentationPanel > div:first-child {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+}
+.presentationPanel > div:first-child > span {
+  grid-row: 1/3;
+  font-size: 28px;
+}
+.presentationPanel h2,
+.presentationPanel p {
+  margin: 0;
+}
+.presentationPanel p {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.pptFrame {
+  width: 100%;
+  min-height: 480px;
+  border: 1px solid #e6a5b8;
+  border-radius: 10px;
+}
+.presentationEmpty {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  padding: 25px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffe7ee, #ffe7ee);
+  color: #7c3450;
+  text-align: center;
+}
+.excelPanel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #e6a5b8;
+  border-radius: 12px;
+  background: #fffafb;
+}
+.excelPanel > div:first-child {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.excelPanel > div:first-child > span {
+  font-size: 28px;
+}
+.excelPanel h2,
+.excelPanel p {
+  margin: 0;
+}
+.excelPanel p {
+  margin-top: 5px;
+  color: #7c4b5e;
+}
+.excelLinks {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.excelLinks a,
+.excelLinks > span {
+  display: block;
+  padding: 13px 15px;
+  border: 1px solid #e6a5b8;
+  border-radius: 9px;
+  color: #7c3450;
+  background: #ffe7ee;
+  font-weight: 800;
+  text-decoration: none;
+}
+.excelLinks > span {
+  color: #916b7a;
+  font-weight: 600;
+}
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: #62304480;
+}
+.modal {
+  width: min(680px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 14px;
+  background: #fffafb;
+  box-shadow: 0 24px 70px #62304455;
+}
+.modalTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modalTitle h2 {
+  margin: 0;
+}
+.modalTitle button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  font-size: 24px;
+}
+.modal label {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+}
+.modal input,
+.modal textarea,
+.modal select {
+  min-height: 42px;
+  padding: 10px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  font: inherit;
+}
+.modal textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.modalGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.saveButton {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #f0789c;
+  color: #fffafb;
+  font-weight: 800;
+}
+.contentGrid article {
+  padding: 24px;
+  border: 1px solid #e6a5b8;
+  border-radius: 13px;
+  background: #fffafb;
+}
+.contentGrid article > span {
+  font-size: 27px;
+}
+.contentGrid p {
+  color: #7c4b5e;
+  line-height: 1.5;
+}
+.notice {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  padding: 13px 17px;
+  border-radius: 9px;
+  background: #ed376f;
+  color: #fffafb;
+  font-weight: 800;
+  box-shadow: 0 10px 30px #62304440;
+}
+@media (max-width: 1000px) {
+  .periodFilters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .financialDetails {
+    grid-template-columns: 1fr;
+  }
+  .contextBar,
+  .summaryGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .finding {
+    grid-template-columns: auto 1fr;
+  }
+  .finding > span:not(.findingIcon),
+  .finding > button {
+    grid-column: 2;
+  }
+  .decision {
+    grid-template-columns: 1fr 1fr;
+  }
+  .overviewPanel {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 650px) {
+  .contextBar,
+  .summaryGrid,
+  .contentGrid,
+  .decision {
+    grid-template-columns: 1fr;
+  }
+  .overviewSteps {
+    grid-template-columns: 1fr;
+  }
+  .historyRow {
+    grid-template-columns: 1fr;
+    padding: 13px 0;
+    gap: 5px;
+  }
+  .biHeader,
+  .modalGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .embedSettings {
+    grid-template-columns: 1fr;
+  }
+  .biHeader select {
+    min-width: 0;
+    width: 100%;
+  }
+}
