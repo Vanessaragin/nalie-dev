@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "NEXT_DIST_DIR=.next-dev next dev",
     "build": "next build",
+    "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
