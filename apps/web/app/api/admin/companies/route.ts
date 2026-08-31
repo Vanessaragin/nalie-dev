@@ -9,6 +9,8 @@ import { NextResponse } from 'next/server';
 
 type ProvisionUser = { name?: string; email?: string };
 type CompanyBody = {
+  companyId?: string;
+  provisionAccess?: boolean;
   personType?: 'physical' | 'legal';
   name?: string;
   company?: string;
@@ -65,6 +67,8 @@ export async function POST(request: Request) {
   const body = (await request.json()) as CompanyBody;
   const name = body.name?.trim() ?? '';
   const company = body.company?.trim() || name;
+  const existingCompanyId = body.companyId?.trim() || undefined;
+  const provisionAccess = body.provisionAccess === true;
   const users = (body.users ?? [])
     .map((user) => ({
       name: user.name?.trim() ?? '',
@@ -119,32 +123,34 @@ export async function POST(request: Request) {
   const invitedUserIds: string[] = [];
   try {
     const legalDocument = body.legalDocument?.replace(/\D/g, '') ?? '';
-    const [{ data: companyWithSameName }, documentMatch] = await Promise.all([
-      adminClient
-        .from('companies')
-        .select('id, display_name')
-        .ilike('display_name', company)
-        .limit(1)
-        .maybeSingle(),
-      body.personType === 'legal' && legalDocument
-        ? adminClient
-            .from('companies')
-            .select('id, display_name')
-            .eq('legal_document', legalDocument)
-            .limit(1)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ]);
-    if (companyWithSameName || documentMatch.data) {
-      const existingName =
-        companyWithSameName?.display_name ?? documentMatch.data?.display_name;
-      return NextResponse.json(
-        { error: `O cliente ${existingName || company} já existe.` },
-        { status: 409 },
-      );
+    if (!existingCompanyId) {
+      const [{ data: companyWithSameName }, documentMatch] = await Promise.all([
+        adminClient
+          .from('companies')
+          .select('id, display_name')
+          .ilike('display_name', company)
+          .limit(1)
+          .maybeSingle(),
+        body.personType === 'legal' && legalDocument
+          ? adminClient
+              .from('companies')
+              .select('id, display_name')
+              .eq('legal_document', legalDocument)
+              .limit(1)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+      if (companyWithSameName || documentMatch.data) {
+        const existingName =
+          companyWithSameName?.display_name ?? documentMatch.data?.display_name;
+        return NextResponse.json(
+          { error: `O cliente ${existingName || company} já existe.` },
+          { status: 409 },
+        );
+      }
     }
 
-    for (const user of users) {
+    for (const user of provisionAccess ? users : []) {
       const existing = await findUserByEmail(adminClient, user.email);
       if (existing) {
         const { data: membership } = await adminClient
@@ -162,120 +168,138 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data: roles, error: rolesError } = await adminClient
-      .from('roles')
-      .select('id, code')
-      .in('code', ['COMPANY_ADMIN', 'COMPANY_USER']);
-    if (rolesError) throw rolesError;
-    const roleIds = Object.fromEntries(
-      (roles ?? []).map((role) => [role.code, role.id]),
-    );
-    if (!roleIds.COMPANY_ADMIN || !roleIds.COMPANY_USER) {
-      throw new Error('Perfis da empresa não configurados.');
-    }
-
-    const { data: createdCompany, error: companyError } = await adminClient
-      .from('companies')
-      .insert({
-        legal_name: company,
-        display_name: company,
-        entity_type: body.personType === 'physical' ? 'personal' : 'company',
-        legal_document:
-          body.personType === 'legal' ? legalDocument || null : null,
-        segment: body.personType === 'physical' ? 'PERSONAL' : 'SERVICES',
-        country: 'BR',
-        region: body.state?.trim() || null,
-        city: body.city?.trim() || null,
-        base_currency: 'BRL',
-        timezone: 'America/Sao_Paulo',
-        status: 'ACTIVE',
-      })
-      .select('id')
-      .single();
-    if (companyError || !createdCompany) throw companyError;
-    createdCompanyId = createdCompany.id;
-
-    const origin = new URL(request.url).origin;
-    const provisioned: Array<{ user: User; invitationSent: boolean }> = [];
-    for (const user of users) {
-      let authUser = await findUserByEmail(adminClient, user.email);
-      let invitationSent = false;
-      if (!authUser) {
-        const { data, error } = await adminClient.auth.admin.inviteUserByEmail(
-          user.email,
-          {
-            redirectTo: `${origin}/primeiro-acesso`,
-            data: { full_name: user.name, company_id: createdCompany.id },
-          },
-        );
-        if (error || !data.user)
-          throw error ?? new Error('Convite não criado.');
-        authUser = data.user;
-        invitedUserIds.push(data.user.id);
-        invitationSent = true;
-      }
-      provisioned.push({ user: authUser, invitationSent });
-    }
-
-    const { error: profileError } = await adminClient.from('profiles').upsert(
-      provisioned.map(({ user }, index) => ({
-        id: user.id,
-        display_name: users[index].name,
-        full_name: users[index].name,
-        public_email: users[index].email,
-        status: 'ACTIVE',
-      })),
-    );
-    if (profileError) throw profileError;
-
-    const { data: memberships, error: membershipError } = await adminClient
-      .from('company_users')
-      .insert(
-        provisioned.map(({ user }, index) => ({
-          company_id: createdCompany.id,
-          profile_id: user.id,
-          role_id: index === 0 ? roleIds.COMPANY_ADMIN : roleIds.COMPANY_USER,
-          status: 'INVITED',
-          access_level: index === 0 ? 'COMPLETE' : 'LIMITED',
-          full_access: index === 0,
-        })),
-      )
-      .select('id, profile_id');
-    if (membershipError) throw membershipError;
-
-    const limitedMembership = memberships?.[1];
-    if (limitedMembership) {
-      const { data: limitedPermissions, error: permissionError } =
+    let companyId = existingCompanyId;
+    if (companyId) {
+      const { data: existingCompany, error: existingCompanyError } =
         await adminClient
-          .from('permissions')
+          .from('companies')
           .select('id')
-          .in('code', [
-            'content.publications.read',
-            'calendar.read',
-            'company.profile.read',
-            'company.settings.read',
-          ]);
-      if (permissionError) throw permissionError;
-      const { error: overrideError } = await adminClient
-        .from('company_user_permission_overrides')
-        .upsert(
-          (limitedPermissions ?? []).map((permission) => ({
-            company_user_id: limitedMembership.id,
-            permission_id: permission.id,
-            allowed: true,
-            changed_by: claims.claims.sub,
-          })),
-        );
-      if (overrideError) throw overrideError;
+          .eq('id', companyId)
+          .single();
+      if (existingCompanyError || !existingCompany)
+        throw new Error('Contato não encontrado para liberar o acesso.');
+    } else {
+      const { data: createdCompany, error: companyError } = await adminClient
+        .from('companies')
+        .insert({
+          legal_name: company,
+          display_name: company,
+          entity_type: body.personType === 'physical' ? 'personal' : 'company',
+          legal_document:
+            body.personType === 'legal' ? legalDocument || null : null,
+          segment: body.personType === 'physical' ? 'PERSONAL' : 'SERVICES',
+          country: 'BR',
+          region: body.state?.trim() || null,
+          city: body.city?.trim() || null,
+          base_currency: 'BRL',
+          timezone: 'America/Sao_Paulo',
+          status: 'ACTIVE',
+        })
+        .select('id')
+        .single();
+      if (companyError || !createdCompany) throw companyError;
+      companyId = createdCompany.id;
+      createdCompanyId = createdCompany.id;
     }
 
-    await adminClient.from('client_crm').upsert({
-      company_id: createdCompany.id,
+    if (!companyId) throw new Error('Não foi possível identificar o contato.');
+
+    let memberships: Array<{ id: string; profile_id: string }> = [];
+    const provisioned: Array<{ user: User; invitationSent: boolean }> = [];
+
+    if (provisionAccess) {
+      const { data: roles, error: rolesError } = await adminClient
+        .from('roles')
+        .select('id, code')
+        .in('code', ['COMPANY_ADMIN', 'COMPANY_USER']);
+      if (rolesError) throw rolesError;
+      const roleIds = Object.fromEntries(
+        (roles ?? []).map((role) => [role.code, role.id]),
+      );
+      if (!roleIds.COMPANY_ADMIN || !roleIds.COMPANY_USER)
+        throw new Error('Perfis da empresa não configurados.');
+
+      const origin = new URL(request.url).origin;
+      for (const user of users) {
+        let authUser = await findUserByEmail(adminClient, user.email);
+        let invitationSent = false;
+        if (!authUser) {
+          const { data, error } =
+            await adminClient.auth.admin.inviteUserByEmail(user.email, {
+              redirectTo: `${origin}/primeiro-acesso`,
+              data: { full_name: user.name, company_id: companyId },
+            });
+          if (error || !data.user)
+            throw error ?? new Error('Convite não criado.');
+          authUser = data.user;
+          invitedUserIds.push(data.user.id);
+          invitationSent = true;
+        }
+        provisioned.push({ user: authUser, invitationSent });
+      }
+
+      const { error: profileError } = await adminClient.from('profiles').upsert(
+        provisioned.map(({ user }, index) => ({
+          id: user.id,
+          display_name: users[index].name,
+          full_name: users[index].name,
+          public_email: users[index].email,
+          status: 'ACTIVE',
+        })),
+      );
+      if (profileError) throw profileError;
+
+      const { data, error: membershipError } = await adminClient
+        .from('company_users')
+        .insert(
+          provisioned.map(({ user }, index) => ({
+            company_id: companyId,
+            profile_id: user.id,
+            role_id: index === 0 ? roleIds.COMPANY_ADMIN : roleIds.COMPANY_USER,
+            status: 'INVITED',
+            access_level: index === 0 ? 'COMPLETE' : 'LIMITED',
+            full_access: index === 0,
+          })),
+        )
+        .select('id, profile_id');
+      if (membershipError) throw membershipError;
+      memberships = data ?? [];
+
+      const limitedMembership = memberships[1];
+      if (limitedMembership) {
+        const { data: limitedPermissions, error: permissionError } =
+          await adminClient
+            .from('permissions')
+            .select('id')
+            .in('code', [
+              'content.publications.read',
+              'calendar.read',
+              'company.profile.read',
+              'company.settings.read',
+            ]);
+        if (permissionError) throw permissionError;
+        const { error: overrideError } = await adminClient
+          .from('company_user_permission_overrides')
+          .upsert(
+            (limitedPermissions ?? []).map((permission) => ({
+              company_user_id: limitedMembership.id,
+              permission_id: permission.id,
+              allowed: true,
+              changed_by: claims.claims.sub,
+            })),
+          );
+        if (overrideError) throw overrideError;
+      }
+    }
+
+    const { error: crmError } = await adminClient.from('client_crm').upsert({
+      company_id: companyId,
       lifecycle_stage: 'ACTIVE',
     });
+    if (crmError) throw crmError;
 
     const contractValue = Number(body.contractValue ?? 0);
-    if (contractValue > 0) {
+    if (provisionAccess && contractValue > 0) {
       const frequency =
         body.periodicity === 'Semanal'
           ? 'WEEKLY'
@@ -295,7 +319,7 @@ export async function POST(request: Request) {
       const { error: subscriptionError } = await adminClient
         .from('service_subscriptions')
         .insert({
-          company_id: createdCompany.id,
+          company_id: companyId,
           package_code: 'MANAGEMENT',
           customer_type: body.personType === 'physical' ? 'PERSON' : 'COMPANY',
           billing_frequency: frequency,
@@ -311,8 +335,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      companyId: createdCompany.id,
-      users: (memberships ?? []).map((membership, index) => ({
+      companyId,
+      accessProvisioned: provisionAccess,
+      users: memberships.map((membership, index) => ({
         id: membership.profile_id,
         membershipId: membership.id,
         email: users[index].email,

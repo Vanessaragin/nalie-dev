@@ -572,17 +572,33 @@ export default function CrmPage() {
     setFormError('');
     setSavingClient(true);
     const form = new FormData(event.currentTarget);
+    const clientStatus = String(form.get('clientStatus')) as ClientStatus;
+    const contracted = clientStatus === 'Contratado ativo';
+    const contractValue = Number(form.get('contractValue'));
+    if (
+      contracted &&
+      (!String(form.get('contractedService')).trim() || contractValue <= 0)
+    ) {
+      setFormError(
+        'Para liberar o acesso, informe o serviço contratado e um valor maior que zero.',
+      );
+      setSavingClient(false);
+      return;
+    }
     const now = new Date().toISOString();
     let companyId = editingClient && selected ? selected.companyId : undefined;
     let portalUsers =
       editingClient && selected ? selected.portalUsers : undefined;
-    if (!editingClient) {
+    const needsAccess = contracted && !portalUsers?.length;
+    if (!editingClient || needsAccess) {
       setNotice('');
       try {
         const response = await fetch('/api/admin/companies', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            companyId: editingClient ? companyId : undefined,
+            provisionAccess: contracted,
             personType: String(form.get('personType')),
             name: String(form.get('name')),
             company: String(form.get('company') ?? form.get('name')),
@@ -590,7 +606,7 @@ export default function CrmPage() {
             city: String(form.get('city')),
             state: String(form.get('state')),
             contractedService: String(form.get('contractedService')),
-            contractValue: Number(form.get('contractValue')),
+            contractValue,
             startDate: String(form.get('startDate')),
             periodicity: String(form.get('periodicity')),
             users: [
@@ -643,11 +659,11 @@ export default function CrmPage() {
       country: String(form.get('country')),
       notes: String(form.get('notes')),
       contactStatus: String(form.get('contactStatus')) as ClientStatus,
-      clientStatus: String(form.get('clientStatus')) as ClientStatus,
+      clientStatus,
       serviceInterest: String(form.get('serviceInterest')),
       contractedService: String(form.get('contractedService')),
       startDate: String(form.get('startDate')),
-      contractValue: Number(form.get('contractValue')),
+      contractValue,
       periodicity: String(form.get('periodicity')),
       dashboardUrl:
         editingClient && selected ? (selected.dashboardUrl ?? '') : '',
@@ -676,8 +692,9 @@ export default function CrmPage() {
         setSavingClient(false);
         return;
       }
-      synchronizationWarning =
-        'O acesso foi criado, mas alguns detalhes do contato não foram sincronizados.';
+      synchronizationWarning = contracted
+        ? 'O acesso foi criado e o convite enviado, mas alguns detalhes do contato não foram sincronizados.'
+        : 'O contato foi salvo sem enviar e-mail, mas alguns detalhes não foram sincronizados.';
     }
     setData((current) => ({
       ...current,
@@ -692,7 +709,9 @@ export default function CrmPage() {
       editingClient
         ? `${client.name} atualizado.`
         : synchronizationWarning ||
-            `${client.name} cadastrado com sucesso. Cliente ${companyId} e acesso(s) vinculados.`,
+            (contracted
+              ? `${client.name} cadastrado e acesso(s) vinculados. O convite de primeiro acesso foi enviado.`
+              : `${client.name} salvo como contato. Nenhum acesso ou e-mail foi enviado.`),
     );
     setEditingClient(false);
   }
@@ -975,7 +994,7 @@ export default function CrmPage() {
                 setModal('client');
               }}
             >
-              ＋ Criar cliente e acessos
+              ＋ Novo contato ou cliente
             </button>
           </div>
         </header>
@@ -1261,24 +1280,15 @@ export default function CrmPage() {
                 ].includes(selected.contactStatus) && (
                   <button
                     onClick={() => {
-                      setData((current) => ({
-                        ...current,
-                        clients: current.clients.map((client) =>
-                          client.id === selected.id
-                            ? {
-                                ...client,
-                                clientStatus: 'Contratado ativo',
-                                contactStatus: 'Negociação concluída',
-                              }
-                            : client,
-                        ),
-                      }));
                       setNotice(
-                        `${selected.name} convertido em cliente definitivo com o ID ${selected.id}.`,
+                        'Preencha a contratação. O acesso e o convite serão criados somente ao salvar como “Contratado ativo”.',
                       );
+                      setEditingClient(true);
+                      setFormError('');
+                      setModal('client');
                     }}
                   >
-                    Converter em cliente definitivo
+                    Contratar e liberar acesso
                   </button>
                 )}
               </div>
@@ -1468,8 +1478,8 @@ function ModalFields({
         <fieldset className={styles.formSection}>
           <legend>2. Responsável e primeiro acesso</legend>
           <p>
-            Estes dados identificam a pessoa física ou o responsável pela
-            empresa e também criam o primeiro usuário do portal.
+            Estes dados identificam o contato. O usuário do portal e o e-mail de
+            primeiro acesso só serão criados após a contratação.
           </p>
           <div className={styles.formGrid}>
             <label>
@@ -1579,8 +1589,8 @@ function ModalFields({
                 min="0"
                 step="0.01"
                 defaultValue={client?.contractValue}
-                required={!client}
               />
+              <small>Deixe vazio enquanto for somente intenção.</small>
             </label>
             <label>
               Tipo da cobrança
