@@ -61,6 +61,8 @@ const contractStatuses: ClientStatus[] = [
   'Pausado',
   'Encerrado',
 ];
+const administratorEmails = ['naliedados@gmail.com', 'reginaragin@gmail.com'];
+const administratorClientId = 'ADMINISTRATOR';
 const clientStatuses = [...contactStatuses, ...contractStatuses];
 
 function contactStatus(value: unknown): ClientStatus {
@@ -211,6 +213,29 @@ async function persistCrmActivity(
   if (error) throw error;
 }
 
+async function persistAdministrativeActivity(
+  title: string,
+  metadata: Record<string, unknown>,
+) {
+  const supabase = createClient({ detectSessionInUrl: false });
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData.user?.id;
+  const email = authData.user?.email?.toLowerCase();
+  if (!userId || !email || !administratorEmails.includes(email))
+    throw new Error('Acesso mestre não identificado.');
+  const { error } = await supabase.from('admin_activities').insert({
+    profile_id: userId,
+    activity_type: String(metadata.type ?? 'Atividade administrativa'),
+    title,
+    due_at: String(metadata.dueAt),
+    priority: String(metadata.priority),
+    owner_name: String(metadata.owner),
+    completed: Boolean(metadata.completed),
+    metadata: { administrator_emails: administratorEmails },
+  });
+  if (error) throw error;
+}
+
 function State({
   value,
 }: {
@@ -266,6 +291,7 @@ export default function CrmPage() {
           membershipsResult,
           linksResult,
           activitiesResult,
+          adminActivitiesResult,
         ] = await Promise.all([
           supabase
             .from('companies')
@@ -289,6 +315,12 @@ export default function CrmPage() {
             .from('client_activities')
             .select('id,company_id,kind,title,metadata,occurred_at')
             .order('occurred_at', { ascending: false }),
+          supabase
+            .from('admin_activities')
+            .select(
+              'id,activity_type,title,due_at,priority,owner_name,completed',
+            )
+            .order('due_at', { ascending: true }),
         ]);
         if (
           companiesResult.error ||
@@ -296,6 +328,7 @@ export default function CrmPage() {
           membershipsResult.error ||
           linksResult.error ||
           activitiesResult.error ||
+          adminActivitiesResult.error ||
           !active
         )
           return;
@@ -471,22 +504,34 @@ export default function CrmPage() {
               nextActionAt: String(m.nextActionAt ?? ''),
             };
           }),
-          nextActions: records('NEXT_ACTION').map((activity) => {
-            const m = activity.metadata as Record<string, unknown>;
-            return {
-              id: String(activity.id),
-              clientId: clientIdByCompany.get(activity.company_id)!,
-              type: String(m.type ?? ''),
+          nextActions: [
+            ...records('NEXT_ACTION').map((activity) => {
+              const m = activity.metadata as Record<string, unknown>;
+              return {
+                id: String(activity.id),
+                clientId: clientIdByCompany.get(activity.company_id)!,
+                type: String(m.type ?? ''),
+                title: activity.title,
+                dueAt: String(m.dueAt ?? ''),
+                priority: String(m.priority ?? 'Normal') as
+                  | 'Alta'
+                  | 'Média'
+                  | 'Normal',
+                owner: String(m.owner ?? ''),
+                completed: Boolean(m.completed),
+              };
+            }),
+            ...(adminActivitiesResult.data ?? []).map((activity) => ({
+              id: `ADMIN-${activity.id}`,
+              clientId: administratorClientId,
+              type: activity.activity_type,
               title: activity.title,
-              dueAt: String(m.dueAt ?? ''),
-              priority: String(m.priority ?? 'Normal') as
-                | 'Alta'
-                | 'Média'
-                | 'Normal',
-              owner: String(m.owner ?? ''),
-              completed: Boolean(m.completed),
-            };
-          }),
+              dueAt: activity.due_at,
+              priority: activity.priority as 'Alta' | 'Média' | 'Normal',
+              owner: activity.owner_name,
+              completed: activity.completed,
+            })),
+          ],
           files: records('MATERIAL').map((activity) => {
             const m = activity.metadata as Record<string, unknown>;
             return {
@@ -573,7 +618,7 @@ export default function CrmPage() {
     setSavingClient(true);
     const form = new FormData(event.currentTarget);
     const clientStatus = String(form.get('clientStatus')) as ClientStatus;
-    const contracted = clientStatus === 'Contratado ativo';
+    const contracted = clientStatus !== 'Não contratado';
     const contractValue = Number(form.get('contractValue'));
     if (
       contracted &&
@@ -710,7 +755,7 @@ export default function CrmPage() {
         ? `${client.name} atualizado.`
         : synchronizationWarning ||
             (contracted
-              ? `${client.name} cadastrado e acesso(s) vinculados. O convite de primeiro acesso foi enviado.`
+              ? `${client.name} cadastrado como cliente e acesso(s) vinculados. O convite de primeiro acesso foi enviado.`
               : `${client.name} salvo como contato. Nenhum acesso ou e-mail foi enviado.`),
     );
     setEditingClient(false);
@@ -865,6 +910,19 @@ export default function CrmPage() {
     const targetClient = data.clients.find(
       (client) => client.id === targetClientId,
     );
+    if (modal === 'action' && targetClientId === administratorClientId) {
+      void persistAdministrativeActivity(String(f.get('title')), {
+        type: String(f.get('type')),
+        dueAt: String(f.get('dueAt')),
+        priority: String(f.get('priority')),
+        owner: String(f.get('owner')),
+        completed: false,
+      }).catch(() =>
+        setNotice(
+          'A atividade ficou visível nesta sessão, mas não pôde ser sincronizada com o banco.',
+        ),
+      );
+    }
     if (targetClient) {
       const save = (
         kind: string,
@@ -1035,9 +1093,11 @@ export default function CrmPage() {
                   <span>Etapa</span>
                 </div>
                 {actions.map((action) => {
-                  const client = data.clients.find(
-                    (item) => item.id === action.clientId,
-                  );
+                  const administrative =
+                    action.clientId === administratorClientId;
+                  const client = administrative
+                    ? undefined
+                    : data.clients.find((item) => item.id === action.clientId);
                   const index = workflowStages.indexOf(stage);
                   return (
                     <div className={styles.activityRow} key={action.id}>
@@ -1060,8 +1120,14 @@ export default function CrmPage() {
                         </button>
                       </label>
                       <span>
-                        {client?.name ?? 'Cliente não encontrado'}
-                        <small>{client?.company || 'Pessoa física'}</small>
+                        {administrative
+                          ? 'Administrador'
+                          : (client?.name ?? 'Cliente não encontrado')}
+                        <small>
+                          {administrative
+                            ? administratorEmails.join(' · ')
+                            : client?.company || 'Pessoa física'}
+                        </small>
                       </span>
                       <span>{action.owner}</span>
                       <span>{formatDate(action.dueAt)}</span>
@@ -1281,7 +1347,7 @@ export default function CrmPage() {
                   <button
                     onClick={() => {
                       setNotice(
-                        'Preencha a contratação. O acesso e o convite serão criados somente ao salvar como “Contratado ativo”.',
+                        'Preencha a contratação. O acesso e o convite serão criados ao salvar qualquer situação diferente de “Não contratado”.',
                       );
                       setEditingClient(true);
                       setFormError('');
@@ -1511,7 +1577,6 @@ function ModalFields({
                 placeholder="(11) 99999-9999"
                 defaultValue={client?.whatsapp}
               />
-              <small>O código 55 será incluído automaticamente no link.</small>
             </label>
             <label>
               Telefone alternativo
@@ -1590,7 +1655,6 @@ function ModalFields({
                 step="0.01"
                 defaultValue={client?.contractValue}
               />
-              <small>Deixe vazio enquanto for somente intenção.</small>
             </label>
             <label>
               Tipo da cobrança
@@ -1861,6 +1925,9 @@ function ModalFields({
           <select name="clientId" defaultValue={selectedId ?? ''} required>
             <option value="" disabled>
               Selecione o cliente
+            </option>
+            <option value={administratorClientId}>
+              Administrador · atividades da Nalie
             </option>
             {clients.map((client) => (
               <option value={client.id} key={client.id}>
