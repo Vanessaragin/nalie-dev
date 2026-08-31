@@ -567,8 +567,8 @@ export default function CrmPage() {
             periodicity: String(form.get('periodicity')),
             users: [
               {
-                name: String(form.get('user1Name')),
-                email: String(form.get('user1Email')),
+                name: String(form.get('name')),
+                email: String(form.get('email')),
               },
               {
                 name: String(form.get('user2Name')),
@@ -1357,203 +1357,218 @@ function ModalFields({
 
   if (modal === 'client')
     return (
-      <div className={styles.formGrid}>
-        <label>
-          Tipo de pessoa
-          <select
-            name="personType"
-            value={personType}
-            onChange={(event) =>
-              setPersonType(event.target.value as 'physical' | 'legal')
-            }
-          >
-            <option value="physical">Pessoa física</option>
-            <option value="legal">Pessoa jurídica</option>
-          </select>
-        </label>
-        <label>
-          {personType === 'physical' ? 'Nome completo' : 'Nome do responsável'}
-          <input name="name" required autoFocus defaultValue={client?.name} />
-        </label>
-        {personType === 'legal' ? (
-          <>
+      <div className={styles.clientFormSections}>
+        <fieldset className={styles.formSection}>
+          <legend>1. Dados da pessoa ou empresa</legend>
+          <div className={styles.formGrid}>
             <label>
-              Razão social
-              <input name="company" required defaultValue={client?.company} />
+              Tipo de cadastro
+              <select
+                name="personType"
+                value={personType}
+                onChange={(event) =>
+                  setPersonType(event.target.value as 'physical' | 'legal')
+                }
+              >
+                <option value="physical">Pessoa física</option>
+                <option value="legal">Pessoa jurídica</option>
+              </select>
+            </label>
+            {personType === 'legal' ? (
+              <>
+                <label>
+                  Razão social
+                  <input
+                    name="company"
+                    required
+                    autoFocus
+                    defaultValue={client?.company}
+                  />
+                </label>
+                <label>
+                  CNPJ
+                  <input
+                    name="legalDocument"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="00.000.000/0001-00"
+                    defaultValue={client?.legalDocument}
+                  />
+                </label>
+              </>
+            ) : null}
+            <label>
+              Cidade
+              <input name="city" defaultValue={client?.city} />
             </label>
             <label>
-              CNPJ
+              Estado
+              <input name="state" defaultValue={client?.state} />
+            </label>
+            <label>
+              País
               <input
-                name="legalDocument"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="Somente para pessoa jurídica"
-                defaultValue={client?.legalDocument}
+                name="country"
+                defaultValue={client?.country || 'Brasil'}
               />
             </label>
-          </>
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.formSection}>
+          <legend>2. Responsável e primeiro acesso</legend>
+          <p>
+            Estes dados identificam a pessoa física ou o responsável pela
+            empresa e também criam o primeiro usuário do portal.
+          </p>
+          <div className={styles.formGrid}>
+            <label>
+              {personType === 'physical'
+                ? 'Nome completo'
+                : 'Nome do responsável'}
+              <input
+                name="name"
+                required
+                autoFocus={personType === 'physical'}
+                defaultValue={client?.name}
+              />
+            </label>
+            <label>
+              E-mail principal
+              <input
+                name="email"
+                type="email"
+                required
+                defaultValue={client?.email}
+              />
+            </label>
+            <label>
+              WhatsApp
+              <input
+                name="whatsapp"
+                type="tel"
+                required
+                placeholder="(11) 99999-9999"
+                defaultValue={client?.whatsapp}
+              />
+              <small>O código 55 será incluído automaticamente no link.</small>
+            </label>
+            <label>
+              Telefone alternativo
+              <input name="phone" type="tel" defaultValue={client?.phone} />
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.formSection}>
+          <legend>3. Serviço e status do contato</legend>
+          <div className={styles.formGrid}>
+            <label>
+              Status do contato
+              <select name="contactStatus" defaultValue={client?.contactStatus}>
+                {clientStatuses.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Status do cliente
+              <select name="clientStatus" defaultValue={client?.clientStatus}>
+                {clientStatuses.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Serviço de interesse
+              <input
+                name="serviceInterest"
+                defaultValue={client?.serviceInterest}
+              />
+            </label>
+            <label>
+              Serviço contratado
+              <input
+                name="contractedService"
+                defaultValue={client?.contractedService}
+              />
+            </label>
+            <label>
+              Data de início
+              <input
+                name="startDate"
+                type="date"
+                defaultValue={client?.startDate}
+              />
+            </label>
+            <label>
+              Valor que este cliente pagará
+              <input
+                name="contractValue"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={client?.contractValue}
+                required={!client}
+              />
+            </label>
+            <label>
+              Tipo da cobrança
+              <select
+                name="periodicity"
+                defaultValue={client?.periodicity || 'Mensal'}
+              >
+                <option>Semanal</option>
+                <option>Quinzenal</option>
+                <option>Mensal</option>
+              </select>
+            </label>
+            <label>
+              Responsável interno pelo atendimento
+              <input
+                name="owner"
+                defaultValue={client?.owner || 'Vanessa Rodrigues'}
+              />
+            </label>
+          </div>
+        </fieldset>
+
+        {!client ? (
+          <fieldset className={styles.formSection}>
+            <legend>4. Usuário extra (opcional)</legend>
+            <p>
+              Deixe os dois campos vazios se o cliente terá somente um acesso.
+            </p>
+            <div className={styles.formGrid}>
+              <label>
+                Nome do usuário extra
+                <input name="user2Name" placeholder="Nome completo" />
+              </label>
+              <label>
+                E-mail do usuário extra
+                <input
+                  name="user2Email"
+                  type="email"
+                  placeholder="usuario@empresa.com"
+                />
+              </label>
+            </div>
+          </fieldset>
         ) : null}
-        <label>
-          WhatsApp
-          <input
-            name="whatsapp"
-            type="tel"
-            required
-            placeholder="(11) 99999-9999 ou 5511999999999"
-            defaultValue={client?.whatsapp}
-          />
-          <small>
-            Pode usar o formato brasileiro com DDD. O código 55 será incluído
-            automaticamente no link.
-          </small>
-        </label>
-        <label>
-          Telefone
-          <input name="phone" defaultValue={client?.phone} />
-        </label>
-        <label>
-          E-mail
-          <input
-            name="email"
-            type="email"
-            required
-            defaultValue={client?.email}
-          />
-        </label>
-        <label>
-          Instagram
-          <input name="instagram" defaultValue={client?.instagram} />
-        </label>
-        <label>
-          Cidade
-          <input name="city" defaultValue={client?.city} />
-        </label>
-        <label>
-          Estado
-          <input name="state" defaultValue={client?.state} />
-        </label>
-        <label>
-          País
-          <input name="country" defaultValue={client?.country || 'Brasil'} />
-        </label>
-        <label>
-          Status do contato
-          <select name="contactStatus" defaultValue={client?.contactStatus}>
-            {clientStatuses.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Status do cliente
-          <select name="clientStatus" defaultValue={client?.clientStatus}>
-            {clientStatuses.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Serviço de interesse
-          <input
-            name="serviceInterest"
-            defaultValue={client?.serviceInterest}
-          />
-        </label>
-        <label>
-          Serviço contratado
-          <input
-            name="contractedService"
-            defaultValue={client?.contractedService}
-          />
-        </label>
-        <label>
-          Data de início
-          <input
-            name="startDate"
-            type="date"
-            defaultValue={client?.startDate}
-          />
-        </label>
-        <label>
-          Valor que este cliente pagará
-          <input
-            name="contractValue"
-            type="number"
-            min="0"
-            step="0.01"
-            defaultValue={client?.contractValue}
-            required={!client}
-          />
-          <small>
-            Ao criar a empresa, este valor gera o plano e a primeira cobrança
-            automaticamente. Depois pode ser alterado em Pagamentos dos
-            serviços.
-          </small>
-        </label>
-        <label>
-          Tipo da cobrança
-          <select
-            name="periodicity"
-            defaultValue={client?.periodicity || 'Mensal'}
-          >
-            <option>Semanal</option>
-            <option>Quinzenal</option>
-            <option>Mensal</option>
-          </select>
-        </label>
-        <label>
-          Responsável
-          <input
-            name="owner"
-            defaultValue={client?.owner || 'Vanessa Rodrigues'}
-          />
-        </label>
-        <label>
-          Nome do Usuário 1
-          <input
-            name="user1Name"
-            placeholder="Nome completo"
-            required={!client}
-            disabled={Boolean(client)}
-          />
-        </label>
-        <label>
-          E-mail do Usuário 1
-          <input
-            name="user1Email"
-            type="email"
-            placeholder="usuario1@empresa.com"
-            required={!client}
-            disabled={Boolean(client)}
-          />
-        </label>
-        <label>
-          Nome do Usuário 2 (opcional)
-          <input
-            name="user2Name"
-            placeholder="Nome completo"
-            disabled={Boolean(client)}
-          />
-        </label>
-        <label>
-          E-mail do Usuário 2 (opcional)
-          <input
-            name="user2Email"
-            type="email"
-            placeholder="usuario2@empresa.com"
-            disabled={Boolean(client)}
-          />
-          {!client ? (
-            <small>
-              Preencha os dois campos somente se quiser criar um segundo acesso
-              agora.
-            </small>
-          ) : null}
-        </label>
-        <label className={styles.wide}>
-          Observações
-          <textarea name="notes" defaultValue={client?.notes} />
-        </label>
+
+        <fieldset className={styles.formSection}>
+          <legend>5. Rede social e observações</legend>
+          <div className={styles.formGrid}>
+            <label>
+              Instagram
+              <input name="instagram" defaultValue={client?.instagram} />
+            </label>
+            <label className={styles.wide}>
+              Observações
+              <textarea name="notes" defaultValue={client?.notes} />
+            </label>
+          </div>
+        </fieldset>
       </div>
     );
   if (modal === 'period')

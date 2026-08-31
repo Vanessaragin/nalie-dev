@@ -849,6 +849,33 @@
   gap: 13px;
   margin-top: 20px;
 }
+.clientFormSections {
+  display: grid;
+  gap: 22px;
+  margin-top: 22px;
+}
+.formSection {
+  min-width: 0;
+  margin: 0;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid #e6a5b8;
+}
+.formSection legend {
+  padding: 0 10px 0 0;
+  color: #623044;
+  font-size: 13px;
+  font-weight: 900;
+}
+.formSection > p {
+  margin: 4px 0 0;
+  color: #7c4b5e;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.formSection .formGrid {
+  margin-top: 12px;
+}
 .formGrid label {
   display: grid;
   gap: 6px;
