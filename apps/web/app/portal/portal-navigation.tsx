@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useCurrentPagePermissions } from '../components/page-permissions';
+import {
+  clearCurrentPagePermissions,
+  useCurrentPagePermissions,
+} from '../components/page-permissions';
 import { createClient } from '../../lib/supabase/client';
 import styles from './portal-navigation.module.css';
 import shell from './styles.module.css';
@@ -135,6 +138,7 @@ export default function PortalNavigation({
       const supabase = createClient();
       await supabase.auth.signOut();
     } finally {
+      clearCurrentPagePermissions();
       // Atribuição completa também encerra qualquer estado autenticado mantido
       // pela árvore do App Router antes de exibir novamente o login.
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination

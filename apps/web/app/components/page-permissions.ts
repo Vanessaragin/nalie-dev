@@ -28,6 +28,13 @@ const all = [
   ...subpagePermissionKeys,
   'super',
 ];
+
+let cachedPermissions: readonly string[] | null = null;
+
+export function clearCurrentPagePermissions() {
+  cachedPermissions = null;
+}
+
 export function saveCreatedUserPermissions(
   _role: string,
   _permissions: string[],
@@ -40,20 +47,27 @@ export function saveCreatedUserPermissions(
 }
 
 export function useCurrentPagePermissions() {
-  // Começa sem privilégios para nunca exibir controles privados durante a
-  // identificação do usuário no navegador.
-  const [permissions, setPermissions] = useState<readonly string[]>([]);
+  // Conserva o último resultado durante a navegação interna. Cada página ainda
+  // confirma as permissões no Supabase, mas o menu não desaparece enquanto a
+  // nova consulta é concluída.
+  const [permissions, setPermissions] = useState<readonly string[]>(
+    () => cachedPermissions ?? [],
+  );
   useEffect(() => {
     let active = true;
+    const apply = (next: readonly string[]) => {
+      cachedPermissions = next;
+      if (active) setPermissions(next);
+    };
     const update = async () => {
       try {
         const supabase = createClient({ detectSessionInUrl: false });
         const { data: superAdmin, error: superAdminError } =
           await supabase.rpc('is_super_admin');
         if (superAdminError) throw superAdminError;
-        if (superAdmin) return active && setPermissions(all);
+        if (superAdmin) return apply(all);
         const { data: authData } = await supabase.auth.getUser();
-        if (!authData.user) return active && setPermissions([]);
+        if (!authData.user) return apply([]);
         const { data, error } = await supabase
           .from('company_users')
           .select('access_level,status')
@@ -67,18 +81,18 @@ export function useCurrentPagePermissions() {
             (membership) => membership.access_level === 'COMPLETE',
           )
         )
-          return (
-            active && setPermissions(all.filter((item) => item !== 'super'))
-          );
+          return apply(all.filter((item) => item !== 'super'));
         if (
           memberships.some(
             (membership) => membership.access_level === 'LIMITED',
           )
         )
-          return active && setPermissions(limitedPagePermissions);
-        if (active) setPermissions([]);
+          return apply(limitedPagePermissions);
+        apply([]);
       } catch {
-        if (active) setPermissions([]);
+        // Em uma troca de página, uma falha transitória não deve apagar um menu
+        // que já foi autorizado nesta mesma sessão.
+        if (active && cachedPermissions === null) setPermissions([]);
       }
     };
     void update();

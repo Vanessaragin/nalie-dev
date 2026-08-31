@@ -35,6 +35,11 @@ const workflowStages = [
 ] as const;
 type WorkflowStage = (typeof workflowStages)[number];
 
+function whatsappNumber(value: string) {
+  const digits = value.replace(/\D/g, '');
+  return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
+}
+
 const clientStatuses: ClientStatus[] = [
   'Lead',
   'Em contato',
@@ -1197,7 +1202,7 @@ export default function CrmPage() {
               </div>
               <div className={styles.quickLinks}>
                 <a
-                  href={`https://wa.me/${selected.whatsapp}`}
+                  href={`https://wa.me/${whatsappNumber(selected.whatsapp)}`}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -1390,7 +1395,17 @@ function ModalFields({
         ) : null}
         <label>
           WhatsApp
-          <input name="whatsapp" required defaultValue={client?.whatsapp} />
+          <input
+            name="whatsapp"
+            type="tel"
+            required
+            placeholder="(11) 99999-9999 ou 5511999999999"
+            defaultValue={client?.whatsapp}
+          />
+          <small>
+            Pode usar o formato brasileiro com DDD. O código 55 será incluído
+            automaticamente no link.
+          </small>
         </label>
         <label>
           Telefone
