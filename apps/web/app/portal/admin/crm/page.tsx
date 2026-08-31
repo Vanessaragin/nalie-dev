@@ -213,27 +213,30 @@ async function persistCrmActivity(
   if (error) throw error;
 }
 
-async function persistAdministrativeActivity(
-  title: string,
-  metadata: Record<string, unknown>,
+async function persistActivitySecurely(
+  client: CrmClient | undefined,
+  administrator: boolean,
+  activity: {
+    title: string;
+    type: string;
+    dueAt: string;
+    priority: 'Alta' | 'Média' | 'Normal';
+    owner: string;
+  },
 ) {
-  const supabase = createClient({ detectSessionInUrl: false });
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData.user?.id;
-  const email = authData.user?.email?.toLowerCase();
-  if (!userId || !email || !administratorEmails.includes(email))
-    throw new Error('Acesso mestre não identificado.');
-  const { error } = await supabase.from('admin_activities').insert({
-    profile_id: userId,
-    activity_type: String(metadata.type ?? 'Atividade administrativa'),
-    title,
-    due_at: String(metadata.dueAt),
-    priority: String(metadata.priority),
-    owner_name: String(metadata.owner),
-    completed: Boolean(metadata.completed),
-    metadata: { administrator_emails: administratorEmails },
+  const response = await fetch('/api/admin/activities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      companyId: client?.companyId,
+      administrator,
+      ...activity,
+    }),
   });
-  if (error) throw error;
+  const result = (await response.json()) as { error?: string; id?: string };
+  if (!response.ok || !result.id)
+    throw new Error(result.error ?? 'A atividade não foi gravada.');
+  return result.id;
 }
 
 function State({
@@ -284,14 +287,30 @@ export default function CrmPage() {
     let active = true;
     async function loadClients() {
       try {
+        type ClientActivityRow = {
+          id: string | number;
+          company_id: string;
+          kind: string;
+          title: string;
+          metadata: Record<string, unknown>;
+          occurred_at: string;
+        };
+        type AdminActivityRow = {
+          id: string | number;
+          activity_type: string;
+          title: string;
+          due_at: string;
+          priority: string;
+          owner_name: string;
+          completed: boolean;
+        };
         const supabase = createClient({ detectSessionInUrl: false });
         const [
           companiesResult,
           crmResult,
           membershipsResult,
           linksResult,
-          activitiesResult,
-          adminActivitiesResult,
+          activitiesResponse,
         ] = await Promise.all([
           supabase
             .from('companies')
@@ -311,16 +330,13 @@ export default function CrmPage() {
             .select(
               'company_id,link_type,display_name,source_url,access_scope',
             ),
-          supabase
-            .from('client_activities')
-            .select('id,company_id,kind,title,metadata,occurred_at')
-            .order('occurred_at', { ascending: false }),
-          supabase
-            .from('admin_activities')
-            .select(
-              'id,activity_type,title,due_at,priority,owner_name,completed',
-            )
-            .order('due_at', { ascending: true }),
+          fetch('/api/admin/activities').then(async (response) => ({
+            ok: response.ok,
+            data: (await response.json()) as {
+              clientActivities?: ClientActivityRow[];
+              adminActivities?: AdminActivityRow[];
+            },
+          })),
         ]);
         if (companiesResult.error || crmResult.error || !active) {
           if (active)
@@ -403,7 +419,12 @@ export default function CrmPage() {
         const clientIdByCompany = new Map(
           clients.map((client) => [client.companyId, client.id]),
         );
-        const activities = activitiesResult.data ?? [];
+        const activities = activitiesResponse.ok
+          ? (activitiesResponse.data.clientActivities ?? [])
+          : [];
+        const adminActivities = activitiesResponse.ok
+          ? (activitiesResponse.data.adminActivities ?? [])
+          : [];
         const records = (kind: string) =>
           activities.filter(
             (activity) =>
@@ -518,7 +539,7 @@ export default function CrmPage() {
                 completed: Boolean(m.completed),
               };
             }),
-            ...(adminActivitiesResult.data ?? []).map((activity) => ({
+            ...adminActivities.map((activity) => ({
               id: `ADMIN-${activity.id}`,
               clientId: administratorClientId,
               type: activity.activity_type,
@@ -782,19 +803,17 @@ export default function CrmPage() {
       setSavingClient(true);
       try {
         if (targetClientId === administratorClientId) {
-          await persistAdministrativeActivity(action.title, action);
+          action.id = await persistActivitySecurely(undefined, true, action);
         } else {
           const targetClient = data.clients.find(
             (client) => client.id === targetClientId,
           );
           if (!targetClient) throw new Error('Cliente não encontrado.');
-          await persistCrmActivity(targetClient, 'NEXT_ACTION', action.title, {
-            type: action.type,
-            dueAt: action.dueAt,
-            priority: action.priority,
-            owner: action.owner,
-            completed: false,
-          });
+          action.id = await persistActivitySecurely(
+            targetClient,
+            false,
+            action,
+          );
         }
       } catch {
         setSavingClient(false);
