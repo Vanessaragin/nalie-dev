@@ -275,6 +275,9 @@ export default function CrmPage() {
   const [notice, setNotice] = useState('');
   const [formError, setFormError] = useState('');
   const [savingClient, setSavingClient] = useState(false);
+  const [deletingActivityId, setDeletingActivityId] = useState<string | null>(
+    null,
+  );
   const [editingClient, setEditingClient] = useState(false);
   const [activityStages, setActivityStages] = useState<
     Record<string, WorkflowStage>
@@ -623,6 +626,45 @@ export default function CrmPage() {
       ),
     }));
     setNotice(`Atividade movida para ${stage}.`);
+  }
+
+  async function deleteActivity(actionId: string, title: string) {
+    if (!window.confirm(`Apagar definitivamente a atividade “${title}”?`))
+      return;
+    setDeletingActivityId(actionId);
+    setNotice('');
+    try {
+      const response = await fetch('/api/admin/activities', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: actionId,
+          administrator: actionId.startsWith('ADMIN-'),
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? 'Falha ao apagar.');
+      setData((current) => ({
+        ...current,
+        nextActions: current.nextActions.filter(
+          (action) => action.id !== actionId,
+        ),
+      }));
+      setActivityStages((current) => {
+        const next = { ...current };
+        delete next[actionId];
+        return next;
+      });
+      setNotice(`Atividade “${title}” apagada.`);
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível apagar a atividade.',
+      );
+    } finally {
+      setDeletingActivityId(null);
+    }
   }
 
   function openClient(client: CrmClient) {
@@ -1201,6 +1243,18 @@ export default function CrmPage() {
                         >
                           ›
                         </button>
+                        <button
+                          type="button"
+                          className={styles.deleteActivity}
+                          disabled={deletingActivityId === action.id}
+                          onClick={() =>
+                            void deleteActivity(action.id, action.title)
+                          }
+                          aria-label={`Apagar ${action.title}`}
+                          title="Apagar atividade"
+                        >
+                          {deletingActivityId === action.id ? '…' : '×'}
+                        </button>
                       </div>
                     </div>
                   );
@@ -1313,15 +1367,19 @@ export default function CrmPage() {
                 <span>
                   <em>{client.clientStatus}</em>
                 </span>
-                <State
-                  value={
-                    payment?.status === 'Pago'
-                      ? 'Concluído'
-                      : payment?.status === 'Em atraso'
-                        ? 'Atrasado'
-                        : 'Pendente'
-                  }
-                />
+                {client.clientStatus === 'Não contratado' ? (
+                  <span className={styles.notApplicable}>Não se aplica</span>
+                ) : (
+                  <State
+                    value={
+                      payment?.status === 'Pago'
+                        ? 'Concluído'
+                        : payment?.status === 'Em atraso'
+                          ? 'Atrasado'
+                          : 'Pendente'
+                    }
+                  />
+                )}
                 <span>
                   {interaction
                     ? formatDate(interaction.occurredAt.slice(0, 10))

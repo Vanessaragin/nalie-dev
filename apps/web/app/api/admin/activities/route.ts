@@ -131,3 +131,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, id: String(data.id) });
 }
+
+export async function DELETE(request: Request) {
+  const access = await authorizedClients();
+  if (!access)
+    return NextResponse.json(
+      { error: 'Acesso não autorizado.' },
+      { status: 403 },
+    );
+  const body = (await request.json()) as {
+    id?: string;
+    administrator?: boolean;
+  };
+  const rawId = body.id?.replace(/^ADMIN-/, '') ?? '';
+  if (!/^\d+$/.test(rawId))
+    return NextResponse.json({ error: 'Atividade inválida.' }, { status: 400 });
+  const table = body.administrator ? 'admin_activities' : 'client_activities';
+  const { data, error } = await access.admin
+    .from(table)
+    .delete()
+    .eq('id', rawId)
+    .select('id')
+    .maybeSingle();
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data)
+    return NextResponse.json(
+      { error: 'Atividade não encontrada.' },
+      { status: 404 },
+    );
+  return NextResponse.json({ ok: true });
+}
