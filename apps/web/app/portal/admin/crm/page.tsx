@@ -761,13 +761,58 @@ export default function CrmPage() {
     setEditingClient(false);
   }
 
-  function saveRelated(event: FormEvent<HTMLFormElement>) {
+  async function saveRelated(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFormError('');
     const f = new FormData(event.currentTarget);
     if (!selected && modal !== 'action') return;
     const targetClientId = selected?.id ?? String(f.get('clientId'));
     if (!targetClientId) return;
     const now = new Date().toISOString();
+    if (modal === 'action') {
+      const action = {
+        id: uid('PRX'),
+        clientId: targetClientId,
+        type: String(f.get('type')),
+        title: String(f.get('title')),
+        dueAt: String(f.get('dueAt')),
+        priority: String(f.get('priority')) as 'Alta' | 'Média' | 'Normal',
+        owner: String(f.get('owner')),
+        completed: false,
+      };
+      setSavingClient(true);
+      try {
+        if (targetClientId === administratorClientId) {
+          await persistAdministrativeActivity(action.title, action);
+        } else {
+          const targetClient = data.clients.find(
+            (client) => client.id === targetClientId,
+          );
+          if (!targetClient) throw new Error('Cliente não encontrado.');
+          await persistCrmActivity(targetClient, 'NEXT_ACTION', action.title, {
+            type: action.type,
+            dueAt: action.dueAt,
+            priority: action.priority,
+            owner: action.owner,
+            completed: false,
+          });
+        }
+      } catch {
+        setSavingClient(false);
+        setFormError(
+          'A atividade não foi gravada no banco. O formulário foi mantido aberto para você tentar novamente.',
+        );
+        return;
+      }
+      setData((current) => ({
+        ...current,
+        nextActions: [action, ...current.nextActions],
+      }));
+      setSavingClient(false);
+      setModal(null);
+      setNotice('Atividade salva no banco com sucesso.');
+      return;
+    }
     if (modal === 'period') {
       const competence = String(f.get('competence'));
       setData((current) => ({
@@ -874,23 +919,6 @@ export default function CrmPage() {
           ...current.deliveries,
         ],
       }));
-    if (modal === 'action')
-      setData((current) => ({
-        ...current,
-        nextActions: [
-          {
-            id: uid('PRX'),
-            clientId: targetClientId,
-            type: String(f.get('type')),
-            title: String(f.get('title')),
-            dueAt: String(f.get('dueAt')),
-            priority: String(f.get('priority')) as 'Alta' | 'Média' | 'Normal',
-            owner: String(f.get('owner')),
-            completed: false,
-          },
-          ...current.nextActions,
-        ],
-      }));
     if (modal === 'file')
       setData((current) => ({
         ...current,
@@ -910,19 +938,6 @@ export default function CrmPage() {
     const targetClient = data.clients.find(
       (client) => client.id === targetClientId,
     );
-    if (modal === 'action' && targetClientId === administratorClientId) {
-      void persistAdministrativeActivity(String(f.get('title')), {
-        type: String(f.get('type')),
-        dueAt: String(f.get('dueAt')),
-        priority: String(f.get('priority')),
-        owner: String(f.get('owner')),
-        completed: false,
-      }).catch(() =>
-        setNotice(
-          'A atividade ficou visível nesta sessão, mas não pôde ser sincronizada com o banco.',
-        ),
-      );
-    }
     if (targetClient) {
       const save = (
         kind: string,
@@ -1000,14 +1015,6 @@ export default function CrmPage() {
           otherUrl: String(f.get('otherUrl')),
           notes: String(f.get('notes')),
         });
-      if (modal === 'action')
-        void save('NEXT_ACTION', String(f.get('title')), {
-          type: String(f.get('type')),
-          dueAt: String(f.get('dueAt')),
-          priority: String(f.get('priority')),
-          owner: String(f.get('owner')),
-          completed: false,
-        });
       if (modal === 'file')
         void save('MATERIAL', String(f.get('title')), {
           category: String(f.get('category')),
@@ -1068,7 +1075,12 @@ export default function CrmPage() {
               <h2>Fluxo de atividades</h2>
               <p>Conclua uma atividade ou mova para a próxima etapa.</p>
             </div>
-            <button onClick={() => setModal('action')}>
+            <button
+              onClick={() => {
+                setFormError('');
+                setModal('action');
+              }}
+            >
               ＋ Nova atividade
             </button>
           </div>
@@ -1334,7 +1346,12 @@ export default function CrmPage() {
                   WhatsApp ↗
                 </a>
                 <a href={`mailto:${selected.email}`}>E-mail ↗</a>
-                <button onClick={() => setModal('action')}>
+                <button
+                  onClick={() => {
+                    setFormError('');
+                    setModal('action');
+                  }}
+                >
                   ＋ Próxima ação
                 </button>
                 {[
@@ -1413,7 +1430,7 @@ export default function CrmPage() {
                 selectedId={selected?.id}
                 client={editingClient ? (selected ?? undefined) : undefined}
               />
-              {modal === 'client' && formError ? (
+              {formError ? (
                 <p className={styles.formError} role="alert">
                   {formError}
                 </p>
@@ -1423,7 +1440,7 @@ export default function CrmPage() {
                   Cancelar
                 </button>
                 <button className={shell.import} disabled={savingClient}>
-                  {savingClient ? 'Criando empresa…' : 'Salvar registro'}
+                  {savingClient ? 'Salvando no banco…' : 'Salvar registro'}
                 </button>
               </footer>
             </form>
