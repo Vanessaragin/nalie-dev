@@ -121,6 +121,8 @@ async function persistClient(client: CrmClient) {
         legal_name: client.company,
         display_name: client.company,
         entity_type: client.personType === 'physical' ? 'personal' : 'company',
+        legal_document:
+          client.personType === 'legal' ? client.legalDocument || null : null,
         city: client.city || null,
         region: client.state || null,
         updated_at: client.updatedAt,
@@ -232,7 +234,7 @@ export default function CrmPage() {
           supabase
             .from('companies')
             .select(
-              'id,legal_name,display_name,entity_type,city,region,country,created_at,updated_at,status',
+              'id,legal_name,display_name,entity_type,legal_document,city,region,country,created_at,updated_at,status',
             )
             .eq('status', 'ACTIVE')
             .order('display_name'),
@@ -286,6 +288,7 @@ export default function CrmPage() {
               companyId: company.id,
               personType:
                 company.entity_type === 'personal' ? 'physical' : 'legal',
+              legalDocument: String(company.legal_document ?? ''),
               portalUsers: memberships.map((membership) => {
                 const profile = Array.isArray(membership.profiles)
                   ? membership.profiles[0]
@@ -549,7 +552,8 @@ export default function CrmPage() {
           body: JSON.stringify({
             personType: String(form.get('personType')),
             name: String(form.get('name')),
-            company: String(form.get('company')),
+            company: String(form.get('company') ?? form.get('name')),
+            legalDocument: String(form.get('legalDocument') ?? ''),
             city: String(form.get('city')),
             state: String(form.get('state')),
             contractedService: String(form.get('contractedService')),
@@ -565,7 +569,7 @@ export default function CrmPage() {
                 name: String(form.get('user2Name')),
                 email: String(form.get('user2Email')),
               },
-            ],
+            ].filter((user) => user.name.trim() || user.email.trim()),
           }),
         });
         const result = (await response.json()) as {
@@ -593,9 +597,10 @@ export default function CrmPage() {
           : `CLI-${String(data.clients.length + 1).padStart(4, '0')}`,
       companyId,
       personType: String(form.get('personType')) as 'physical' | 'legal',
+      legalDocument: String(form.get('legalDocument') ?? ''),
       portalUsers,
       name: String(form.get('name')),
-      company: String(form.get('company')),
+      company: String(form.get('company') ?? form.get('name')),
       whatsapp: String(form.get('whatsapp')),
       phone: String(form.get('phone')),
       email: String(form.get('email')),
@@ -643,7 +648,7 @@ export default function CrmPage() {
     setNotice(
       editingClient
         ? `${client.name} atualizado.`
-        : `${client.name} adicionado. Empresa ${companyId} e dois usuários vinculados.`,
+        : `${client.name} adicionado. Cliente ${companyId} e acesso(s) vinculados.`,
     );
     setEditingClient(false);
   }
@@ -925,7 +930,7 @@ export default function CrmPage() {
                 setModal('client');
               }}
             >
-              ＋ Criar empresa e 2 usuários
+              ＋ Criar cliente e acessos
             </button>
           </div>
         </header>
@@ -1313,7 +1318,7 @@ function modalTitle(
   >,
 ) {
   return {
-    client: 'Criar empresa e 2 usuários',
+    client: 'Criar cliente e acessos',
     period: 'Novo acompanhamento do período',
     interaction: 'Nova interação',
     payment: 'Novo pagamento',
@@ -1341,6 +1346,10 @@ function ModalFields({
   selectedId?: string;
   client?: CrmClient;
 }) {
+  const [personType, setPersonType] = useState<'physical' | 'legal'>(
+    client?.personType ?? 'physical',
+  );
+
   if (modal === 'client')
     return (
       <div className={styles.formGrid}>
@@ -1348,20 +1357,37 @@ function ModalFields({
           Tipo de pessoa
           <select
             name="personType"
-            defaultValue={client?.personType ?? 'physical'}
+            value={personType}
+            onChange={(event) =>
+              setPersonType(event.target.value as 'physical' | 'legal')
+            }
           >
             <option value="physical">Pessoa física</option>
             <option value="legal">Pessoa jurídica</option>
           </select>
         </label>
         <label>
-          Nome
+          {personType === 'physical' ? 'Nome completo' : 'Nome do responsável'}
           <input name="name" required autoFocus defaultValue={client?.name} />
         </label>
-        <label>
-          Empresa
-          <input name="company" defaultValue={client?.company} />
-        </label>
+        {personType === 'legal' ? (
+          <>
+            <label>
+              Razão social
+              <input name="company" required defaultValue={client?.company} />
+            </label>
+            <label>
+              CNPJ
+              <input
+                name="legalDocument"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Somente para pessoa jurídica"
+                defaultValue={client?.legalDocument}
+              />
+            </label>
+          </>
+        ) : null}
         <label>
           WhatsApp
           <input name="whatsapp" required defaultValue={client?.whatsapp} />
@@ -1487,23 +1513,27 @@ function ModalFields({
           />
         </label>
         <label>
-          Nome do Usuário 2
+          Nome do Usuário 2 (opcional)
           <input
             name="user2Name"
             placeholder="Nome completo"
-            required={!client}
             disabled={Boolean(client)}
           />
         </label>
         <label>
-          E-mail do Usuário 2
+          E-mail do Usuário 2 (opcional)
           <input
             name="user2Email"
             type="email"
             placeholder="usuario2@empresa.com"
-            required={!client}
             disabled={Boolean(client)}
           />
+          {!client ? (
+            <small>
+              Preencha os dois campos somente se quiser criar um segundo acesso
+              agora.
+            </small>
+          ) : null}
         </label>
         <label className={styles.wide}>
           Observações

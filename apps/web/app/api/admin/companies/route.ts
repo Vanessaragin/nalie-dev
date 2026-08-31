@@ -12,6 +12,7 @@ type CompanyBody = {
   personType?: 'physical' | 'legal';
   name?: string;
   company?: string;
+  legalDocument?: string;
   city?: string;
   state?: string;
   contractedService?: string;
@@ -53,23 +54,27 @@ export async function POST(request: Request) {
   const body = (await request.json()) as CompanyBody;
   const name = body.name?.trim() ?? '';
   const company = body.company?.trim() || name;
-  const users = (body.users ?? []).map((user) => ({
-    name: user.name?.trim() ?? '',
-    email: user.email?.trim().toLowerCase() ?? '',
-  }));
+  const users = (body.users ?? [])
+    .map((user) => ({
+      name: user.name?.trim() ?? '',
+      email: user.email?.trim().toLowerCase() ?? '',
+    }))
+    .filter((user) => user.name || user.email);
   if (
     !['physical', 'legal'].includes(body.personType ?? '') ||
     name.length < 2 ||
     company.length < 2 ||
-    users.length !== 2 ||
+    users.length < 1 ||
+    users.length > 2 ||
     users.some(
       (user) => user.name.length < 2 || !emailPattern.test(user.email),
     ) ||
-    users[0].email === users[1].email
+    (users.length === 2 && users[0].email === users[1].email)
   ) {
     return NextResponse.json(
       {
-        error: 'Preencha a empresa e os dois usuários com e-mails diferentes.',
+        error:
+          'Preencha o cliente e ao menos um usuário. O segundo usuário é opcional.',
       },
       { status: 400 },
     );
@@ -136,6 +141,10 @@ export async function POST(request: Request) {
         legal_name: company,
         display_name: company,
         entity_type: body.personType === 'physical' ? 'personal' : 'company',
+        legal_document:
+          body.personType === 'legal'
+            ? body.legalDocument?.trim() || null
+            : null,
         segment: body.personType === 'physical' ? 'PERSONAL' : 'SERVICES',
         country: 'BR',
         region: body.state?.trim() || null,

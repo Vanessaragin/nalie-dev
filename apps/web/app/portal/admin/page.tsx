@@ -374,12 +374,12 @@ export default function AdminPage() {
                 <input type="email" defaultValue="usuario1@empresa.com" />
               </label>
               <label>
-                Nome do Usuário 2
-                <input defaultValue="Nome completo do Usuário 2" />
+                Nome do Usuário 2 (opcional)
+                <input placeholder="Nome completo do Usuário 2" />
               </label>
               <label>
-                E-mail do Usuário 2
-                <input type="email" defaultValue="usuario2@empresa.com" />
+                E-mail do Usuário 2 (opcional)
+                <input type="email" placeholder="usuario2@empresa.com" />
               </label>
               <div className={styles.pagePermissions}>
                 <div>
@@ -426,10 +426,6 @@ export default function AdminPage() {
               ) : (
                 <>
                   <label>
-                    CPF
-                    <input placeholder="000.000.000-00" />
-                  </label>
-                  <label>
                     Profissão ou atividade
                     <select defaultValue="entrepreneur">
                       <option value="entrepreneur">Empresário</option>
@@ -467,13 +463,13 @@ export default function AdminPage() {
                   setInviteSent(true);
                 }}
               >
-                Criar empresa e enviar os 2 acessos
+                Criar cliente e enviar acesso(s)
               </button>
             </div>
             <p className={styles.profileHint}>
-              👤 Os perfis do Usuário 1 e do Usuário 2 serão criados por você.
-              Cada pessoa poderá alterar apenas os próprios dados pessoais e a
-              própria senha em <b>Meu perfil</b>.
+              👤 O Usuário 1 é obrigatório. O Usuário 2 só será criado quando
+              nome e e-mail forem informados. Cada pessoa poderá alterar apenas
+              os próprios dados pessoais e a própria senha em <b>Meu perfil</b>.
             </p>
             {inviteSent && (
               <div className={styles.inviteResult}>

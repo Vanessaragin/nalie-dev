@@ -18,6 +18,7 @@ export type CrmClient = {
   id: string;
   companyId?: string;
   personType?: 'physical' | 'legal';
+  legalDocument?: string;
   portalUsers?: Array<{
     id: string;
     membershipId: string;
