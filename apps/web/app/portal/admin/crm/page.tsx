@@ -322,16 +322,13 @@ export default function CrmPage() {
             )
             .order('due_at', { ascending: true }),
         ]);
-        if (
-          companiesResult.error ||
-          crmResult.error ||
-          membershipsResult.error ||
-          linksResult.error ||
-          activitiesResult.error ||
-          adminActivitiesResult.error ||
-          !active
-        )
+        if (companiesResult.error || crmResult.error || !active) {
+          if (active)
+            setNotice(
+              'Não foi possível carregar os contatos do banco. Atualize a página e tente novamente.',
+            );
           return;
+        }
         const crms = new Map(
           (crmResult.data ?? []).map((row) => [row.company_id, row]),
         );
@@ -654,6 +651,15 @@ export default function CrmPage() {
             contractValue,
             startDate: String(form.get('startDate')),
             periodicity: String(form.get('periodicity')),
+            phone: phoneDigits(form.get('phone')),
+            whatsapp: phoneDigits(form.get('whatsapp')),
+            email: String(form.get('email')),
+            instagram: String(form.get('instagram')),
+            notes: String(form.get('notes')),
+            contactStatus: String(form.get('contactStatus')),
+            clientStatus,
+            serviceInterest: String(form.get('serviceInterest')),
+            owner: String(form.get('owner')),
             users: [
               {
                 name: String(form.get('name')),
@@ -726,20 +732,14 @@ export default function CrmPage() {
       createdAt: editingClient && selected ? selected.createdAt : now,
       updatedAt: now,
     };
-    let synchronizationWarning = '';
     try {
-      await persistClient(client);
+      if (editingClient) await persistClient(client);
     } catch {
-      if (editingClient) {
-        setFormError(
-          'Não foi possível salvar as alterações. Tente novamente sem fechar o formulário.',
-        );
-        setSavingClient(false);
-        return;
-      }
-      synchronizationWarning = contracted
-        ? 'O acesso foi criado e o convite enviado, mas alguns detalhes do contato não foram sincronizados.'
-        : 'O contato foi salvo sem enviar e-mail, mas alguns detalhes não foram sincronizados.';
+      setFormError(
+        'Não foi possível confirmar a gravação no banco. O formulário foi mantido aberto.',
+      );
+      setSavingClient(false);
+      return;
     }
     setData((current) => ({
       ...current,
@@ -753,10 +753,9 @@ export default function CrmPage() {
     setNotice(
       editingClient
         ? `${client.name} atualizado.`
-        : synchronizationWarning ||
-            (contracted
-              ? `${client.name} cadastrado como cliente e acesso(s) vinculados. O convite de primeiro acesso foi enviado.`
-              : `${client.name} salvo como contato. Nenhum acesso ou e-mail foi enviado.`),
+        : contracted
+          ? `${client.name} cadastrado como cliente e acesso(s) vinculados. O convite de primeiro acesso foi enviado.`
+          : `${client.name} salvo no banco como contato. Nenhum acesso ou e-mail foi enviado.`,
     );
     setEditingClient(false);
   }

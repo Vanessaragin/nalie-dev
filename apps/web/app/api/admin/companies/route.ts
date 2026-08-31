@@ -21,6 +21,15 @@ type CompanyBody = {
   contractValue?: number;
   startDate?: string;
   periodicity?: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  instagram?: string;
+  notes?: string;
+  contactStatus?: string;
+  clientStatus?: string;
+  serviceInterest?: string;
+  owner?: string;
   users?: ProvisionUser[];
 };
 
@@ -294,7 +303,23 @@ export async function POST(request: Request) {
 
     const { error: crmError } = await adminClient.from('client_crm').upsert({
       company_id: companyId,
-      lifecycle_stage: 'ACTIVE',
+      contact_name: name,
+      contact_phone: body.phone?.replace(/\D/g, '') || null,
+      contact_email: body.email?.trim().toLowerCase() || null,
+      whatsapp: body.whatsapp?.replace(/\D/g, '') || null,
+      instagram_handle: body.instagram?.trim() || null,
+      notes: body.notes?.trim() || null,
+      lifecycle_stage: body.clientStatus?.trim() || 'Não contratado',
+      contact_status: body.contactStatus?.trim() || 'Lead',
+      client_status: body.clientStatus?.trim() || 'Não contratado',
+      service_interest: body.serviceInterest?.trim() || null,
+      contracted_service: body.contractedService?.trim() || null,
+      service_start_date: body.startDate?.trim() || null,
+      contract_value: Number(body.contractValue ?? 0),
+      periodicity: body.periodicity?.trim() || null,
+      owner_name: body.owner?.trim() || null,
+      updated_by: claims.claims.sub,
+      updated_at: new Date().toISOString(),
     });
     if (crmError) throw crmError;
 
