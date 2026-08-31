@@ -2,9 +2,14 @@ export type ClientStatus =
   | 'Lead'
   | 'Em contato'
   | 'Aguardando informações'
+  | 'Pesquisa / diagnóstico'
+  | 'Cotação solicitada'
   | 'Proposta enviada'
-  | 'Cliente'
-  | 'Acompanhamento ativo'
+  | 'Em negociação'
+  | 'Negociação concluída'
+  | 'Sem interesse'
+  | 'Não contratado'
+  | 'Contratado ativo'
   | 'Pausado'
   | 'Encerrado';
 

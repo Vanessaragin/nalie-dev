@@ -876,6 +876,16 @@
 .formSection .formGrid {
   margin-top: 12px;
 }
+.formError {
+  margin: 18px 0 0;
+  padding: 11px 13px;
+  border: 1px solid #d16d72;
+  border-radius: 8px;
+  background: #fff1f4;
+  color: #8a3049;
+  font-size: 12px;
+  font-weight: 800;
+}
 .formGrid label {
   display: grid;
   gap: 6px;

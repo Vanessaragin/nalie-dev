@@ -24,6 +24,17 @@ type CompanyBody = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function errorMessage(error: unknown) {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof error.message === 'string'
+  )
+    return error.message;
+  return 'Cadastro não concluído. Revise os dados e tente novamente.';
+}
+
 async function findUserByEmail(adminClient: SupabaseClient, email: string) {
   for (let page = 1; ; page += 1) {
     const { data, error } = await adminClient.auth.admin.listUsers({
@@ -104,7 +115,35 @@ export async function POST(request: Request) {
   const adminClient = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+  let createdCompanyId: string | undefined;
+  const invitedUserIds: string[] = [];
   try {
+    const legalDocument = body.legalDocument?.replace(/\D/g, '') ?? '';
+    const [{ data: companyWithSameName }, documentMatch] = await Promise.all([
+      adminClient
+        .from('companies')
+        .select('id, display_name')
+        .ilike('display_name', company)
+        .limit(1)
+        .maybeSingle(),
+      body.personType === 'legal' && legalDocument
+        ? adminClient
+            .from('companies')
+            .select('id, display_name')
+            .eq('legal_document', legalDocument)
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+    if (companyWithSameName || documentMatch.data) {
+      const existingName =
+        companyWithSameName?.display_name ?? documentMatch.data?.display_name;
+      return NextResponse.json(
+        { error: `O cliente ${existingName || company} já existe.` },
+        { status: 409 },
+      );
+    }
+
     for (const user of users) {
       const existing = await findUserByEmail(adminClient, user.email);
       if (existing) {
@@ -142,9 +181,7 @@ export async function POST(request: Request) {
         display_name: company,
         entity_type: body.personType === 'physical' ? 'personal' : 'company',
         legal_document:
-          body.personType === 'legal'
-            ? body.legalDocument?.trim() || null
-            : null,
+          body.personType === 'legal' ? legalDocument || null : null,
         segment: body.personType === 'physical' ? 'PERSONAL' : 'SERVICES',
         country: 'BR',
         region: body.state?.trim() || null,
@@ -156,6 +193,7 @@ export async function POST(request: Request) {
       .select('id')
       .single();
     if (companyError || !createdCompany) throw companyError;
+    createdCompanyId = createdCompany.id;
 
     const origin = new URL(request.url).origin;
     const provisioned: Array<{ user: User; invitationSent: boolean }> = [];
@@ -173,6 +211,7 @@ export async function POST(request: Request) {
         if (error || !data.user)
           throw error ?? new Error('Convite não criado.');
         authUser = data.user;
+        invitedUserIds.push(data.user.id);
         invitationSent = true;
       }
       provisioned.push({ user: authUser, invitationSent });
@@ -282,10 +321,14 @@ export async function POST(request: Request) {
       })),
     });
   } catch (error) {
+    if (createdCompanyId)
+      await adminClient.from('companies').delete().eq('id', createdCompanyId);
+    await Promise.all(
+      invitedUserIds.map((userId) => adminClient.auth.admin.deleteUser(userId)),
+    );
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : 'Cadastro não concluído.',
+        error: errorMessage(error),
       },
       { status: 500 },
     );

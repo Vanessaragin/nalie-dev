@@ -40,16 +40,46 @@ function whatsappNumber(value: string) {
   return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
 }
 
-const clientStatuses: ClientStatus[] = [
+function phoneDigits(value: FormDataEntryValue | null) {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
+const contactStatuses: ClientStatus[] = [
   'Lead',
   'Em contato',
   'Aguardando informações',
+  'Pesquisa / diagnóstico',
+  'Cotação solicitada',
   'Proposta enviada',
-  'Cliente',
-  'Acompanhamento ativo',
+  'Em negociação',
+  'Negociação concluída',
+  'Sem interesse',
+];
+const contractStatuses: ClientStatus[] = [
+  'Não contratado',
+  'Contratado ativo',
   'Pausado',
   'Encerrado',
 ];
+const clientStatuses = [...contactStatuses, ...contractStatuses];
+
+function contactStatus(value: unknown): ClientStatus {
+  const status = String(value ?? 'Lead');
+  if (status === 'Acompanhamento ativo' || status === 'Cliente')
+    return 'Negociação concluída';
+  return contactStatuses.includes(status as ClientStatus)
+    ? (status as ClientStatus)
+    : 'Lead';
+}
+
+function contractStatus(value: unknown): ClientStatus {
+  const status = String(value ?? 'Não contratado');
+  if (status === 'Cliente' || status === 'Acompanhamento ativo')
+    return 'Contratado ativo';
+  return contractStatuses.includes(status as ClientStatus)
+    ? (status as ClientStatus)
+    : 'Não contratado';
+}
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
@@ -215,6 +245,7 @@ export default function CrmPage() {
     | null
   >(null);
   const [notice, setNotice] = useState('');
+  const [formError, setFormError] = useState('');
   const [savingClient, setSavingClient] = useState(false);
   const [editingClient, setEditingClient] = useState(false);
   const [activityStages, setActivityStages] = useState<
@@ -315,12 +346,8 @@ export default function CrmPage() {
               state: company.region ?? '',
               country: company.country === 'BR' ? 'Brasil' : company.country,
               notes: String(crm?.notes ?? ''),
-              contactStatus: String(
-                crm?.contact_status ?? 'Lead',
-              ) as ClientStatus,
-              clientStatus: String(
-                crm?.client_status ?? 'Lead',
-              ) as ClientStatus,
+              contactStatus: contactStatus(crm?.contact_status),
+              clientStatus: contractStatus(crm?.client_status),
               serviceInterest: String(crm?.service_interest ?? ''),
               contractedService: String(crm?.contracted_service ?? ''),
               startDate: String(crm?.service_start_date ?? ''),
@@ -542,13 +569,14 @@ export default function CrmPage() {
 
   async function saveClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFormError('');
+    setSavingClient(true);
     const form = new FormData(event.currentTarget);
     const now = new Date().toISOString();
     let companyId = editingClient && selected ? selected.companyId : undefined;
     let portalUsers =
       editingClient && selected ? selected.portalUsers : undefined;
     if (!editingClient) {
-      setSavingClient(true);
       setNotice('');
       try {
         const response = await fetch('/api/admin/companies', {
@@ -583,16 +611,16 @@ export default function CrmPage() {
           users?: CrmClient['portalUsers'];
         };
         if (!response.ok || !result.companyId) {
-          setNotice(result.error ?? 'Não foi possível criar a empresa.');
+          setFormError(result.error ?? 'Não foi possível criar o cliente.');
+          setSavingClient(false);
           return;
         }
         companyId = result.companyId;
         portalUsers = result.users;
       } catch {
-        setNotice('Não foi possível conectar ao cadastro seguro.');
-        return;
-      } finally {
+        setFormError('Não foi possível conectar ao cadastro seguro.');
         setSavingClient(false);
+        return;
       }
     }
     const client: CrmClient = {
@@ -606,8 +634,8 @@ export default function CrmPage() {
       portalUsers,
       name: String(form.get('name')),
       company: String(form.get('company') ?? form.get('name')),
-      whatsapp: String(form.get('whatsapp')),
-      phone: String(form.get('phone')),
+      whatsapp: phoneDigits(form.get('whatsapp')),
+      phone: phoneDigits(form.get('phone')),
       email: String(form.get('email')),
       instagram: String(form.get('instagram')),
       city: String(form.get('city')),
@@ -637,23 +665,34 @@ export default function CrmPage() {
       createdAt: editingClient && selected ? selected.createdAt : now,
       updatedAt: now,
     };
+    let synchronizationWarning = '';
+    try {
+      await persistClient(client);
+    } catch {
+      if (editingClient) {
+        setFormError(
+          'Não foi possível salvar as alterações. Tente novamente sem fechar o formulário.',
+        );
+        setSavingClient(false);
+        return;
+      }
+      synchronizationWarning =
+        'O acesso foi criado, mas alguns detalhes do contato não foram sincronizados.';
+    }
     setData((current) => ({
       ...current,
       clients: editingClient
         ? current.clients.map((item) => (item.id === client.id ? client : item))
         : [client, ...current.clients],
     }));
-    void persistClient(client).catch(() =>
-      setNotice(
-        'A empresa foi criada, mas os detalhes do contato não puderam ser sincronizados com o banco.',
-      ),
-    );
+    setSavingClient(false);
     setModal(null);
     setSelectedId(client.id);
     setNotice(
       editingClient
         ? `${client.name} atualizado.`
-        : `${client.name} adicionado. Cliente ${companyId} e acesso(s) vinculados.`,
+        : synchronizationWarning ||
+            `${client.name} cadastrado com sucesso. Cliente ${companyId} e acesso(s) vinculados.`,
     );
     setEditingClient(false);
   }
@@ -932,6 +971,7 @@ export default function CrmPage() {
               className={shell.import}
               onClick={() => {
                 setEditingClient(false);
+                setFormError('');
                 setModal('client');
               }}
             >
@@ -1071,7 +1111,7 @@ export default function CrmPage() {
             />
           </label>
           <label>
-            Status
+            Etapa ou contratação
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -1212,9 +1252,13 @@ export default function CrmPage() {
                 <button onClick={() => setModal('action')}>
                   ＋ Próxima ação
                 </button>
-                {['Lead', 'Em contato', 'Proposta enviada'].includes(
-                  selected.clientStatus,
-                ) && (
+                {[
+                  'Lead',
+                  'Em contato',
+                  'Cotação solicitada',
+                  'Proposta enviada',
+                  'Em negociação',
+                ].includes(selected.contactStatus) && (
                   <button
                     onClick={() => {
                       setData((current) => ({
@@ -1223,8 +1267,8 @@ export default function CrmPage() {
                           client.id === selected.id
                             ? {
                                 ...client,
-                                clientStatus: 'Cliente',
-                                contactStatus: 'Acompanhamento ativo',
+                                clientStatus: 'Contratado ativo',
+                                contactStatus: 'Negociação concluída',
                               }
                             : client,
                         ),
@@ -1259,6 +1303,7 @@ export default function CrmPage() {
               openModal={setModal}
               editClient={() => {
                 setEditingClient(true);
+                setFormError('');
                 setModal('client');
               }}
             />
@@ -1292,6 +1337,11 @@ export default function CrmPage() {
                 selectedId={selected?.id}
                 client={editingClient ? (selected ?? undefined) : undefined}
               />
+              {modal === 'client' && formError ? (
+                <p className={styles.formError} role="alert">
+                  {formError}
+                </p>
+              ) : null}
               <footer>
                 <button type="button" onClick={() => setModal(null)}>
                   Cancelar
@@ -1461,30 +1511,50 @@ function ModalFields({
         </fieldset>
 
         <fieldset className={styles.formSection}>
-          <legend>3. Serviço e status do contato</legend>
+          <legend>3. Interesse, pesquisa e negociação</legend>
+          <p>
+            Use esta parte antes da contratação: pesquisa, cotação, proposta e
+            negociação.
+          </p>
           <div className={styles.formGrid}>
             <label>
-              Status do contato
-              <select name="contactStatus" defaultValue={client?.contactStatus}>
-                {clientStatuses.map((status) => (
+              Etapa do contato
+              <select
+                name="contactStatus"
+                defaultValue={client?.contactStatus || 'Lead'}
+              >
+                {contactStatuses.map((status) => (
                   <option key={status}>{status}</option>
                 ))}
               </select>
             </label>
             <label>
-              Status do cliente
-              <select name="clientStatus" defaultValue={client?.clientStatus}>
-                {clientStatuses.map((status) => (
-                  <option key={status}>{status}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Serviço de interesse
+              Serviço pesquisado ou de interesse
               <input
                 name="serviceInterest"
                 defaultValue={client?.serviceInterest}
               />
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset className={styles.formSection}>
+          <legend>4. Serviço contratado</legend>
+          <p>
+            Preencha somente quando houver contratação. Cotação e pesquisa
+            permanecem no bloco anterior.
+          </p>
+          <div className={styles.formGrid}>
+            <label>
+              Situação da contratação
+              <select
+                name="clientStatus"
+                defaultValue={client?.clientStatus || 'Não contratado'}
+              >
+                {contractStatuses.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
             </label>
             <label>
               Serviço contratado
@@ -1535,7 +1605,7 @@ function ModalFields({
 
         {!client ? (
           <fieldset className={styles.formSection}>
-            <legend>4. Usuário extra (opcional)</legend>
+            <legend>5. Usuário extra (opcional)</legend>
             <p>
               Deixe os dois campos vazios se o cliente terá somente um acesso.
             </p>
@@ -1557,7 +1627,7 @@ function ModalFields({
         ) : null}
 
         <fieldset className={styles.formSection}>
-          <legend>5. Rede social e observações</legend>
+          <legend>6. Rede social e observações</legend>
           <div className={styles.formGrid}>
             <label>
               Instagram
@@ -1955,7 +2025,7 @@ function ClientDetail({
           <span>RELACIONAMENTO COMERCIAL</span>
           <dl>
             <div>
-              <dt>Status</dt>
+              <dt>Situação da contratação</dt>
               <dd>{client.clientStatus}</dd>
             </div>
             <div>
@@ -1994,9 +2064,12 @@ function ClientDetail({
             label="Localização"
             value={`${client.city}, ${client.state} · ${client.country}`}
           />
-          <Info label="Status do contato" value={client.contactStatus} />
-          <Info label="Status do cliente" value={client.clientStatus} />
-          <Info label="Serviço de interesse" value={client.serviceInterest} />
+          <Info label="Etapa do contato" value={client.contactStatus} />
+          <Info label="Situação da contratação" value={client.clientStatus} />
+          <Info
+            label="Serviço pesquisado ou de interesse"
+            value={client.serviceInterest}
+          />
           <Info
             label="Serviço contratado"
             value={client.contractedService || '—'}
