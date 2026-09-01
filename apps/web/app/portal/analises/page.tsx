@@ -223,7 +223,7 @@ export default function AnalysisWorkspacePage() {
           };
         });
         setAnalysisCompanies(mapped);
-        setSelectedCompanyId(mapped[0].id);
+        setSelectedCompanyId(canManageAnalysis ? '' : mapped[0].id);
         return;
       } catch {
         setAnalysisCompanies([]);
@@ -398,12 +398,12 @@ export default function AnalysisWorkspacePage() {
 
   const selectedCompany =
     analysisCompanies.find((item) => item.id === selectedCompanyId) ??
-    analysisCompanies[0] ??
-    fallbackCompany;
+    (canManageAnalysis ? null : (analysisCompanies[0] ?? fallbackCompany));
   const canViewSelectedContent =
-    canManageAnalysis ||
-    selectedCompany.contentAccess !== 'Restrito' ||
-    permissions.includes('analysis:bi');
+    selectedCompany !== null &&
+    (canManageAnalysis ||
+      selectedCompany.contentAccess !== 'Restrito' ||
+      permissions.includes('analysis:bi'));
 
   return (
     <main className={shell.portal}>
@@ -480,7 +480,7 @@ export default function AnalysisWorkspacePage() {
           <section className={styles.contextBar}>
             <div>
               <small>Empresa</small>
-              <b>{selectedCompany.company}</b>
+              <b>{selectedCompany?.company ?? 'Selecione um cliente'}</b>
             </div>
             <div>
               <small>Período</small>
@@ -749,6 +749,9 @@ export default function AnalysisWorkspacePage() {
                       setSelectedCompanyId(event.target.value)
                     }
                   >
+                    <option value="" disabled>
+                      Selecione um cliente ou empresa
+                    </option>
                     {analysisCompanies.map((company) => (
                       <option key={company.id} value={company.id}>
                         {company.company}
@@ -762,7 +765,16 @@ export default function AnalysisWorkspacePage() {
                 </span>
               )}
             </div>
-            {!canViewSelectedContent ? (
+            {!selectedCompany ? (
+              <div className={styles.biEmpty}>
+                <span>📊</span>
+                <h2>Selecione um cliente ou empresa</h2>
+                <p>
+                  Escolha acima quem deseja analisar para carregar o conteúdo
+                  correspondente.
+                </p>
+              </div>
+            ) : !canViewSelectedContent ? (
               <div className={styles.biEmpty}>
                 <span>🔒</span>
                 <h2>Conteúdo restrito</h2>
