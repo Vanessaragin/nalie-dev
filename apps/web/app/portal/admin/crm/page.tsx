@@ -36,6 +36,22 @@ const workflowStages = [
 ] as const;
 type WorkflowStage = (typeof workflowStages)[number];
 
+function actionStage(
+  action: NextAction,
+  stages: Record<string, WorkflowStage>,
+): WorkflowStage {
+  return stages[action.id] ?? (action.completed ? 'Concluído' : 'A fazer');
+}
+
+function clientActionSummary(
+  actions: NextAction[],
+  stages: Record<string, WorkflowStage>,
+) {
+  const present = new Set(actions.map((action) => actionStage(action, stages)));
+  if (present.size === workflowStages.length) return 'Todos';
+  return workflowStages.find((stage) => present.has(stage)) ?? '—';
+}
+
 function whatsappNumber(value: string) {
   const digits = value.replace(/\D/g, '');
   return digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
@@ -1457,8 +1473,24 @@ export default function CrmPage() {
             const interaction = data.interactions
               .filter((i) => i.clientId === client.id)
               .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0];
-            const action = data.nextActions
-              .filter((a) => a.clientId === client.id && !a.completed)
+            const clientActions = data.nextActions.filter(
+              (action) => action.clientId === client.id,
+            );
+            const actionSummary = clientActionSummary(
+              clientActions,
+              activityStages,
+            );
+            const firstSummaryStage = workflowStages.find((stage) =>
+              clientActions.some(
+                (action) => actionStage(action, activityStages) === stage,
+              ),
+            );
+            const summaryAction = clientActions
+              .filter(
+                (action) =>
+                  !firstSummaryStage ||
+                  actionStage(action, activityStages) === firstSummaryStage,
+              )
               .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0];
             return (
               <button
@@ -1493,8 +1525,8 @@ export default function CrmPage() {
                     ? formatDate(interaction.occurredAt.slice(0, 10))
                     : '—'}
                 </span>
-                <span>{action?.title ?? '—'}</span>
-                <span>{formatDate(action?.dueAt)}</span>
+                <span>{actionSummary}</span>
+                <span>{formatDate(summaryAction?.dueAt)}</span>
               </button>
             );
           })}
@@ -1569,6 +1601,7 @@ export default function CrmPage() {
               tab={activeTab}
               client={selected}
               data={data}
+              activityStages={activityStages}
               setData={setData}
               setNotice={setNotice}
               openModal={setModal}
@@ -2238,6 +2271,7 @@ function ClientDetail({
   tab,
   client,
   data,
+  activityStages,
   setData,
   setNotice,
   openModal,
@@ -2246,6 +2280,7 @@ function ClientDetail({
   tab: Tab;
   client: CrmClient;
   data: typeof initialCrmData;
+  activityStages: Record<string, WorkflowStage>;
   setData: React.Dispatch<React.SetStateAction<typeof initialCrmData>>;
   setNotice: React.Dispatch<React.SetStateAction<string>>;
   openModal: (
@@ -2263,9 +2298,14 @@ function ClientDetail({
   const processing = latestByCompetence(data.processings, client.id);
   const delivery = latestByCompetence(data.deliveries, client.id);
   const payment = latestByCompetence(data.payments, client.id);
-  const action = data.nextActions
-    .filter((a) => a.clientId === client.id && !a.completed)
-    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0];
+  const clientActions = data.nextActions
+    .filter((action) => action.clientId === client.id)
+    .sort((a, b) => {
+      const stageDifference =
+        workflowStages.indexOf(actionStage(a, activityStages)) -
+        workflowStages.indexOf(actionStage(b, activityStages));
+      return stageDifference || a.dueAt.localeCompare(b.dueAt);
+    });
   if (tab === 'Resumo')
     return (
       <div className={styles.summary}>
@@ -2324,13 +2364,23 @@ function ClientDetail({
           }
         />
         <article className={styles.nextAction}>
-          <span>PRÓXIMA AÇÃO</span>
-          <h3>{action?.title ?? 'Nenhuma ação pendente'}</h3>
-          <p>
-            {action
-              ? `${formatDate(action.dueAt)} · ${action.priority} · ${action.owner}`
-              : 'Cadastre um próximo contato, cobrança, entrega ou pagamento.'}
-          </p>
+          <span>ATIVIDADES DESTE CLIENTE</span>
+          {clientActions.length ? (
+            <div className={styles.clientActionList}>
+              {clientActions.map((action) => (
+                <div key={action.id}>
+                  <strong>{action.title}</strong>
+                  <em>{actionStage(action, activityStages)}</em>
+                  <small>
+                    {formatDate(action.dueAt)} · {action.priority} ·{' '}
+                    {action.owner}
+                  </small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>Cadastre um próximo contato, cobrança, entrega ou pagamento.</p>
+          )}
           <button onClick={() => openModal('action')}>
             ＋ Registrar próxima ação
           </button>

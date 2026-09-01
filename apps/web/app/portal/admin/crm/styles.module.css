@@ -598,6 +598,31 @@
 .nextAction p {
   color: #7c3450;
 }
+.clientActionList {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+.clientActionList > div {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  gap: 5px 14px;
+  padding: 12px;
+  border: 1px solid #e9a5b9;
+  border-radius: 10px;
+  background: #fff8fa;
+}
+.clientActionList strong,
+.clientActionList small {
+  display: block;
+}
+.clientActionList em {
+  font-style: normal;
+  font-weight: 700;
+}
+.clientActionList small {
+  grid-column: 1 / -1;
+}
 .nextAction button {
   min-height: 37px;
   margin-top: 7px;
