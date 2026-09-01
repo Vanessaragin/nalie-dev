@@ -40,6 +40,7 @@ export default function PaymentsPage() {
   const [editFeedback, setEditFeedback] = useState('');
   const [pixKey, setPixKey] = useState('');
   const [pixSaved, setPixSaved] = useState(false);
+  const [savingCharge, setSavingCharge] = useState(false);
   const [period, setPeriod] = useState(() =>
     new Date().toISOString().slice(0, 7),
   );
@@ -167,27 +168,35 @@ export default function PaymentsPage() {
       setEditFeedback('A chave PIX não pôde ser gravada no banco.');
     }
   }
-  function markPaid(index: number) {
+  async function markPaid(index: number) {
     const payment = payments[index];
-    setPayments((current) =>
-      current.map((item, itemIndex) =>
-        itemIndex === index
-          ? { ...item, status: 'Pago', importsBlocked: false }
-          : item,
-      ),
-    );
-    if (payment.id)
-      void (async () => {
-        const supabase = createClient({ detectSessionInUrl: false });
-        const { error } = await supabase
-          .from('service_payments')
-          .update({
-            payment_status: 'PAID',
-            paid_at: new Date().toISOString(),
-          })
-          .eq('id', payment.id);
-        if (error) setEditFeedback('Não foi possível confirmar o pagamento.');
-      })();
+    if (!payment.id) {
+      setEditFeedback('Esta cobrança ainda não existe no banco.');
+      return;
+    }
+    try {
+      const supabase = createClient({ detectSessionInUrl: false });
+      const { error } = await supabase
+        .from('service_payments')
+        .update({
+          payment_status: 'PAID',
+          paid_at: new Date().toISOString(),
+        })
+        .eq('id', payment.id);
+      if (error) throw error;
+      setPayments((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index
+            ? { ...item, status: 'Pago', importsBlocked: false }
+            : item,
+        ),
+      );
+      setEditFeedback('Pagamento confirmado e gravado no banco.');
+    } catch (error) {
+      setEditFeedback(
+        `Não foi possível confirmar o pagamento: ${error instanceof Error ? error.message : 'erro no banco'}.`,
+      );
+    }
   }
   async function openReceipt(payment: PaymentRow) {
     if (!payment.receiptPath) return;
@@ -205,28 +214,35 @@ export default function PaymentsPage() {
       setEditFeedback('Não foi possível abrir o comprovante desta cobrança.');
     }
   }
-  function toggleImports(index: number) {
+  async function toggleImports(index: number) {
     const selectedPayment = payments[index];
-    setPayments((current) =>
-      current.map((item, itemIndex) => {
-        if (itemIndex !== index) return item;
-        const importsBlocked = !item.importsBlocked;
-        return { ...item, importsBlocked };
-      }),
-    );
-    if (selectedPayment.companyId)
-      void (async () => {
-        const supabase = createClient({ detectSessionInUrl: false });
-        const { error } = await supabase.rpc('set_company_import_access', {
-          target_company_id: selectedPayment.companyId,
-          allow_imports: selectedPayment.importsBlocked,
-          reason: 'Alterado em Pagamentos dos serviços',
-        });
-        if (error)
-          setEditFeedback('Não foi possível alterar o acesso às importações.');
-      })();
+    if (!selectedPayment.companyId) {
+      setEditFeedback('A empresa desta cobrança não foi encontrada no banco.');
+      return;
+    }
+    try {
+      const supabase = createClient({ detectSessionInUrl: false });
+      const { error } = await supabase.rpc('set_company_import_access', {
+        target_company_id: selectedPayment.companyId,
+        allow_imports: selectedPayment.importsBlocked,
+        reason: 'Alterado em Pagamentos dos serviços',
+      });
+      if (error) throw error;
+      setPayments((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index
+            ? { ...item, importsBlocked: !item.importsBlocked }
+            : item,
+        ),
+      );
+      setEditFeedback('Acesso às importações atualizado no banco.');
+    } catch (error) {
+      setEditFeedback(
+        `Não foi possível alterar o acesso às importações: ${error instanceof Error ? error.message : 'erro no banco'}.`,
+      );
+    }
   }
-  function saveCharge(event: FormEvent<HTMLFormElement>) {
+  async function saveCharge(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const edited = {
@@ -240,26 +256,15 @@ export default function PaymentsPage() {
           ? false
           : payments[editor?.index ?? 0].importsBlocked,
     };
-    if (editor?.index === null) {
-      setPayments((current) => [edited, ...current]);
-      setEditFeedback(`Nova cobrança criada para ${edited.client}.`);
-    } else if (editor?.series) {
-      const originalClient = payments[editor.index].client;
-      setPayments((current) =>
-        current.map((item) =>
-          item.client === originalClient
-            ? { ...item, plan: edited.plan, value: edited.value }
-            : item,
-        ),
-      );
-      setEditFeedback(
-        `Valor e plano atualizados em toda a série de ${originalClient}.`,
-      );
-    } else {
-      setPayments((current) =>
-        current.map((item, index) => (index === editor?.index ? edited : item)),
-      );
-      setEditFeedback(`Cobrança de ${edited.client} atualizada.`);
+    if (
+      !edited.client ||
+      !edited.plan.trim() ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(edited.due) ||
+      !Number.isFinite(edited.value) ||
+      edited.value < 0
+    ) {
+      setEditFeedback('Revise cliente, serviço, vencimento e valor.');
+      return;
     }
     const original =
       editor && editor.index !== null ? payments[editor.index] : null;
@@ -268,72 +273,105 @@ export default function PaymentsPage() {
       crmClients.find(
         (client) => (client.company || client.name) === edited.client,
       )?.companyId;
-    if (companyId)
-      void (async () => {
-        try {
-          const supabase = createClient({ detectSessionInUrl: false });
-          const { data: authData } = await supabase.auth.getUser();
-          const userId = authData.user?.id;
-          if (!userId) throw new Error('Sessão inválida.');
-          const statuses: Record<string, string> = {
-            'Pré-lançamento': 'PRELAUNCH',
-            Pendente: 'PENDING',
-            'Vence em breve': 'DUE_SOON',
-            Atrasado: 'OVERDUE',
-            'Aguardando confirmação': 'AWAITING_CONFIRMATION',
-            Pago: 'PAID',
-            Recebido: 'RECEIVED',
-          };
-          if (!original?.id) {
-            const { error } = await supabase.from('service_payments').insert({
-              company_id: companyId,
-              created_by: userId,
-              service_name: edited.plan,
-              amount: edited.value,
-              due_date: edited.due,
-              payment_status: statuses[edited.status] ?? 'PENDING',
-              paid_at: ['Pago', 'Recebido'].includes(edited.status)
-                ? new Date().toISOString()
-                : null,
-              is_prelaunch: edited.status === 'Pré-lançamento',
-            });
-            if (error) throw error;
-          } else if (editor?.series && original.subscriptionId) {
-            const [{ error: subscriptionError }, { error: paymentsError }] =
-              await Promise.all([
-                supabase
-                  .from('service_subscriptions')
-                  .update({ recurring_amount: edited.value })
-                  .eq('id', original.subscriptionId),
-                supabase
-                  .from('service_payments')
-                  .update({ service_name: edited.plan, amount: edited.value })
-                  .eq('subscription_id', original.subscriptionId),
-              ]);
-            if (subscriptionError || paymentsError)
-              throw subscriptionError ?? paymentsError;
-          } else {
-            const { error } = await supabase
+    if (!companyId) {
+      setEditFeedback('O cliente selecionado não foi encontrado no banco.');
+      return;
+    }
+    setSavingCharge(true);
+    try {
+      const supabase = createClient({ detectSessionInUrl: false });
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData.user?.id;
+      if (!userId) throw new Error('Sessão inválida.');
+      const statuses: Record<string, string> = {
+        'Pré-lançamento': 'PRELAUNCH',
+        Pendente: 'PENDING',
+        'Vence em breve': 'DUE_SOON',
+        Atrasado: 'OVERDUE',
+        'Aguardando confirmação': 'AWAITING_CONFIRMATION',
+        Pago: 'PAID',
+        Recebido: 'RECEIVED',
+      };
+      let insertedId: string | undefined;
+      if (!original?.id) {
+        const { data: inserted, error } = await supabase
+          .from('service_payments')
+          .insert({
+            company_id: companyId,
+            created_by: userId,
+            service_name: edited.plan,
+            amount: edited.value,
+            due_date: edited.due,
+            payment_status: statuses[edited.status] ?? 'PENDING',
+            paid_at: ['Pago', 'Recebido'].includes(edited.status)
+              ? new Date().toISOString()
+              : null,
+            is_prelaunch: edited.status === 'Pré-lançamento',
+          })
+          .select('id')
+          .single();
+        if (error) throw error;
+        insertedId = inserted.id;
+      } else if (editor?.series && original.subscriptionId) {
+        const [{ error: subscriptionError }, { error: paymentsError }] =
+          await Promise.all([
+            supabase
+              .from('service_subscriptions')
+              .update({ recurring_amount: edited.value })
+              .eq('id', original.subscriptionId),
+            supabase
               .from('service_payments')
-              .update({
-                service_name: edited.plan,
-                amount: edited.value,
-                due_date: edited.due,
-                payment_status: statuses[edited.status] ?? 'PENDING',
-                paid_at: ['Pago', 'Recebido'].includes(edited.status)
-                  ? new Date().toISOString()
-                  : null,
-              })
-              .eq('id', original.id);
-            if (error) throw error;
-          }
-        } catch {
-          setEditFeedback(
-            'A alteração ficou visível nesta sessão, mas não foi gravada no banco.',
-          );
-        }
-      })();
-    setEditor(null);
+              .update({ service_name: edited.plan, amount: edited.value })
+              .eq('subscription_id', original.subscriptionId),
+          ]);
+        if (subscriptionError || paymentsError)
+          throw subscriptionError ?? paymentsError;
+      } else {
+        const { error } = await supabase
+          .from('service_payments')
+          .update({
+            service_name: edited.plan,
+            amount: edited.value,
+            due_date: edited.due,
+            payment_status: statuses[edited.status] ?? 'PENDING',
+            paid_at: ['Pago', 'Recebido'].includes(edited.status)
+              ? new Date().toISOString()
+              : null,
+          })
+          .eq('id', original.id);
+        if (error) throw error;
+      }
+      if (!original?.id) {
+        setPayments((current) => [
+          { ...edited, id: insertedId, companyId },
+          ...current,
+        ]);
+        setEditFeedback(`Nova cobrança de ${edited.client} gravada no banco.`);
+      } else if (editor?.series) {
+        setPayments((current) =>
+          current.map((item) =>
+            item.subscriptionId === original.subscriptionId
+              ? { ...item, plan: edited.plan, value: edited.value }
+              : item,
+          ),
+        );
+        setEditFeedback(`Série de ${edited.client} atualizada no banco.`);
+      } else {
+        setPayments((current) =>
+          current.map((item, index) =>
+            index === editor?.index ? { ...item, ...edited, companyId } : item,
+          ),
+        );
+        setEditFeedback(`Cobrança de ${edited.client} atualizada no banco.`);
+      }
+      setEditor(null);
+    } catch (error) {
+      setEditFeedback(
+        `Não foi possível gravar a cobrança: ${error instanceof Error ? error.message : 'erro no banco'}.`,
+      );
+    } finally {
+      setSavingCharge(false);
+    }
   }
   function exportPayments() {
     const rows = [
@@ -617,7 +655,9 @@ export default function PaymentsPage() {
                 <button type="button" onClick={() => setEditor(null)}>
                   Cancelar
                 </button>
-                <button type="submit">Salvar</button>
+                <button type="submit" disabled={savingCharge}>
+                  {savingCharge ? 'Salvando...' : 'Salvar'}
+                </button>
               </div>
             </form>
           )}
@@ -663,7 +703,7 @@ export default function PaymentsPage() {
                       Ver comprovante
                     </button>
                   )}
-                  <button onClick={() => markPaid(index)}>
+                  <button onClick={() => void markPaid(index)}>
                     Marcar como pago
                   </button>
                   <button onClick={() => setEditor({ index, series: false })}>
@@ -679,7 +719,7 @@ export default function PaymentsPage() {
                     className={
                       payment.importsBlocked ? styles.unlock : styles.block
                     }
-                    onClick={() => toggleImports(index)}
+                    onClick={() => void toggleImports(index)}
                   >
                     {payment.importsBlocked
                       ? 'Liberar importações'

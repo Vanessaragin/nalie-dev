@@ -50,6 +50,7 @@ export default function ClientCalendarPage() {
   const [showForm, setShowForm] = useState(false);
   const [period, setPeriod] = useState(currentPeriod);
   const [notice, setNotice] = useState('');
+  const [saving, setSaving] = useState(false);
 
   function changeMonth(offset: number) {
     const [year, month] = period.split('-').map(Number);
@@ -113,7 +114,7 @@ export default function ClientCalendarPage() {
     };
   }, []);
 
-  function addEvent(event: FormEvent<HTMLFormElement>) {
+  async function addEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const date = String(form.get('date'));
@@ -123,59 +124,64 @@ export default function ClientCalendarPage() {
     const details = String(form.get('details'));
     const location = String(form.get('location'));
     const duration = Number(form.get('duration') || 60);
-    setEvents((current) => [
-      ...current,
-      {
-        date,
-        day: date.split('-')[2],
-        time,
-        title,
-        type: 'Empresa',
-        reminder,
-        details,
-        location,
-      },
-    ]);
-    setPeriod(date.slice(0, 7));
-    setShowForm(false);
-    setNotice(`${title} foi adicionado ao calendário.`);
-
-    void (async () => {
-      try {
-        const supabase = createClient({ detectSessionInUrl: false });
-        const [{ data: companyId }, { data: authData }] = await Promise.all([
-          supabase.rpc('current_company_id'),
-          supabase.auth.getUser(),
-        ]);
-        const userId = authData.user?.id;
-        if (!companyId || !userId) throw new Error('Sessão sem empresa.');
-        const startsAt = new Date(`${date}T${time}:00`);
-        const endsAt = new Date(startsAt.getTime() + duration * 60_000);
-        const { error } = await supabase.from('calendar_events').insert({
-          company_id: companyId,
-          created_by: userId,
-          assigned_profile_id: userId,
-          title,
-          theme: 'Empresa',
-          starts_at: startsAt.toISOString(),
-          ends_at: endsAt.toISOString(),
-          suggested_agenda: [
-            `Detalhes: ${details}`,
-            `Local: ${location}`,
-            `Lembrete: ${reminder}`,
-          ],
-          whatsapp_reminder_enabled: false,
-          priority: 'NORMAL',
-          booked_with_owner: false,
-          scope: 'COMPANY',
-        });
-        if (error) throw error;
-      } catch {
-        setNotice(
-          'O compromisso ficou visível nesta sessão, mas não pôde ser sincronizado com o banco.',
-        );
-      }
-    })();
+    const startsAt = new Date(`${date}T${time}:00`);
+    if (!title.trim() || Number.isNaN(startsAt.getTime())) {
+      setNotice('Preencha título, data e horário corretamente.');
+      return;
+    }
+    setSaving(true);
+    setNotice('Salvando compromisso no banco...');
+    try {
+      const supabase = createClient({ detectSessionInUrl: false });
+      const [{ data: companyId }, { data: authData }] = await Promise.all([
+        supabase.rpc('current_company_id'),
+        supabase.auth.getUser(),
+      ]);
+      const userId = authData.user?.id;
+      if (!companyId || !userId) throw new Error('Sessão sem empresa.');
+      const endsAt = new Date(startsAt.getTime() + duration * 60_000);
+      const { error } = await supabase.from('calendar_events').insert({
+        company_id: companyId,
+        created_by: userId,
+        assigned_profile_id: userId,
+        title: title.trim(),
+        theme: 'Empresa',
+        starts_at: startsAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        suggested_agenda: [
+          `Detalhes: ${details}`,
+          `Local: ${location}`,
+          `Lembrete: ${reminder}`,
+        ],
+        whatsapp_reminder_enabled: false,
+        priority: 'NORMAL',
+        booked_with_owner: false,
+        scope: 'COMPANY',
+      });
+      if (error) throw error;
+      setEvents((current) => [
+        ...current,
+        {
+          date,
+          day: date.split('-')[2],
+          time,
+          title: title.trim(),
+          type: 'Empresa',
+          reminder,
+          details,
+          location,
+        },
+      ]);
+      setPeriod(date.slice(0, 7));
+      setShowForm(false);
+      setNotice(`${title.trim()} foi salvo no banco e no calendário.`);
+    } catch (error) {
+      setNotice(
+        `Compromisso não salvo: ${error instanceof Error ? error.message : 'o banco recusou os dados'}.`,
+      );
+    } finally {
+      setSaving(false);
+    }
   }
   const newestEvent = events.at(-1);
   const visibleEvents = events.filter((item) => item.date.startsWith(period));
@@ -250,7 +256,7 @@ export default function ClientCalendarPage() {
                 name="date"
                 type="date"
                 required
-                defaultValue="2025-06-26"
+                defaultValue={`${period}-01`}
               />
             </label>
             <label>
@@ -289,7 +295,9 @@ export default function ClientCalendarPage() {
                 placeholder="Objetivo, assuntos e observações"
               />
             </label>
-            <button>Salvar compromisso</button>
+            <button disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar compromisso'}
+            </button>
           </form>
         )}
         <section className={styles.grid}>

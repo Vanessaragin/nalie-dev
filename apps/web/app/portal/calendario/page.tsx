@@ -73,6 +73,10 @@ export default function CalendarPage() {
   const [priorityFilter, setPriorityFilter] = useState('Todas');
   const [clientFilter, setClientFilter] = useState('Todos');
   const [clientChoices, setClientChoices] = useState<ClientChoice[]>([]);
+  const [appointmentClientId, setAppointmentClientId] = useState('');
+  const [appointmentPhone, setAppointmentPhone] = useState('');
+  const [appointmentEmail, setAppointmentEmail] = useState('');
+  const [savingAppointment, setSavingAppointment] = useState(false);
   const calendarAppointments =
     calendarView === 'general' ? generalItems : personalItems;
   const clientOptions = [
@@ -201,46 +205,116 @@ export default function CalendarPage() {
             .filter((item) => item.scope === 'PERSONAL')
             .map((item) => item.appointment),
         );
-      } catch {
+      } catch (error) {
         setClientChoices([]);
+        setAppointmentNotice(
+          `Não foi possível carregar o calendário: ${error instanceof Error ? error.message : 'erro de acesso ao banco'}.`,
+        );
       }
     }
     void loadCalendar();
   }, []);
-  function addAppointment(event: FormEvent<HTMLFormElement>) {
+  async function addAppointment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const title = String(data.get('title'));
+    const title = String(data.get('title')).trim();
     const clientId = String(data.get('client'));
     const selectedClient = clientChoices.find(
       (choice) => choice.id === clientId,
     );
-    const client = selectedClient?.label ?? 'Agenda pessoal';
+    if (!selectedClient) {
+      setAppointmentNotice('Selecione um cliente ou empresa válido.');
+      return;
+    }
     const time = String(data.get('time'));
     const date = String(data.get('date'));
+    const startsAt = new Date(`${date}T${time}:00`);
+    if (!title || !date || !time || Number.isNaN(startsAt.getTime())) {
+      setAppointmentNotice('Preencha título, data e horário corretamente.');
+      return;
+    }
     const day = Number(date.split('-')[2]);
     const priority = String(data.get('priority'));
     const tone =
       priority === 'Alta' ? 'high' : priority === 'Média' ? 'medium' : 'normal';
     const phone = String(data.get('phone')).replace(/\D/g, '');
-    const emailAddress = String(data.get('email'));
-    const details = String(data.get('details'));
-    const location = String(data.get('location'));
+    const emailAddress = String(data.get('email')).trim();
+    const details = String(data.get('details')).trim();
+    const location = String(data.get('location')).trim();
+    const calendar = String(data.get('calendar'));
+    const duration = Number(data.get('duration') || 60);
+    const recurrence = String(data.get('recurrence'));
+    const reminder = String(data.get('reminder'));
+    setSavingAppointment(true);
+    setAppointmentNotice('Salvando compromisso no banco...');
+    let savedId = '';
+    try {
+      const supabase = createClient({ detectSessionInUrl: false });
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+      if (authError || !authData.user)
+        throw authError ?? new Error('Sessão inválida');
+      const { data: saved, error } = await supabase
+        .from('calendar_events')
+        .insert({
+          company_id: clientId,
+          created_by: authData.user.id,
+          assigned_profile_id:
+            calendar === 'personal' ? authData.user.id : null,
+          title,
+          theme: 'Compromisso',
+          starts_at: startsAt.toISOString(),
+          ends_at: new Date(
+            startsAt.getTime() + duration * 60_000,
+          ).toISOString(),
+          suggested_agenda: [
+            `Detalhes: ${details}`,
+            `Local: ${location}`,
+            `Lembrete: ${reminder}`,
+            `Recorrência: ${recurrence}`,
+            `WhatsApp: ${phone}`,
+            `E-mail: ${emailAddress}`,
+          ],
+          whatsapp_reminder_enabled: false,
+          priority:
+            priority === 'Alta'
+              ? 'HIGH'
+              : priority === 'Média'
+                ? 'MEDIUM'
+                : 'NORMAL',
+          booked_with_owner: true,
+          scope: calendar === 'personal' ? 'PERSONAL' : 'COMPANY',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      savedId = String(saved.id);
+    } catch (error) {
+      setAppointmentNotice(
+        `Compromisso não salvo: ${error instanceof Error ? error.message : 'o banco recusou os dados'}.`,
+      );
+      setSavingAppointment(false);
+      return;
+    }
     const item = {
-      id: `local-${Date.now()}`,
+      id: savedId,
       date,
       day,
       time,
       title,
-      client,
+      client: selectedClient.label,
       priority,
       tone,
-      whatsapp: `https://wa.me/${phone}?text=${encodeURIComponent(`Olá! Lembrete: ${title} às ${time}.`)}`,
-      email: `mailto:${emailAddress}?subject=${encodeURIComponent(`Lembrete - ${title}`)}&body=${encodeURIComponent(`${details}${location ? `\nLocal: ${location}` : ''}`)}`,
+      whatsapp: phone
+        ? `https://wa.me/${phone}?text=${encodeURIComponent(`Olá! Lembrete: ${title} às ${time}.`)}`
+        : '',
+      email: emailAddress
+        ? `mailto:${emailAddress}?subject=${encodeURIComponent(`Lembrete - ${title}`)}&body=${encodeURIComponent(`${details}${location ? `\nLocal: ${location}` : ''}`)}`
+        : '',
       details,
       location,
     };
-    if (String(data.get('calendar')) === 'personal') {
+    if (calendar === 'personal') {
       setPersonalItems((current) => [...current, item]);
       setCalendarView('personal');
     } else {
@@ -249,7 +323,12 @@ export default function CalendarPage() {
     }
     setShowAppointmentForm(false);
     setSelectedDay(day);
-    setAppointmentNotice(`${title} adicionado ao calendário.`);
+    setPeriod(date.slice(0, 7));
+    setAppointmentNotice(`${title} foi salvo no banco e no calendário.`);
+    setAppointmentClientId('');
+    setAppointmentPhone('');
+    setAppointmentEmail('');
+    setSavingAppointment(false);
   }
   function changeMonth(offset: number) {
     const [year, month] = period.split('-').map(Number);
@@ -323,7 +402,18 @@ export default function CalendarPage() {
               </label>
               <label>
                 Cliente / empresa
-                <select name="client" required defaultValue="">
+                <select
+                  name="client"
+                  required
+                  value={appointmentClientId}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    const choice = clientChoices.find((item) => item.id === id);
+                    setAppointmentClientId(id);
+                    setAppointmentPhone(choice?.whatsapp ?? '');
+                    setAppointmentEmail(choice?.email ?? '');
+                  }}
+                >
                   <option value="" disabled>
                     Selecione empresa, pessoa e perfil
                   </option>
@@ -332,7 +422,6 @@ export default function CalendarPage() {
                       {choice.label}
                     </option>
                   ))}
-                  <option value="Agenda pessoal">Agenda pessoal</option>
                 </select>
               </label>
               <label>
@@ -383,7 +472,13 @@ export default function CalendarPage() {
               </label>
               <label>
                 WhatsApp
-                <input name="phone" type="tel" placeholder="5511999999999" />
+                <input
+                  name="phone"
+                  type="tel"
+                  placeholder="5511999999999"
+                  value={appointmentPhone}
+                  onChange={(event) => setAppointmentPhone(event.target.value)}
+                />
               </label>
               <label>
                 E-mail
@@ -391,6 +486,8 @@ export default function CalendarPage() {
                   name="email"
                   type="email"
                   placeholder="cliente@empresa.com"
+                  value={appointmentEmail}
+                  onChange={(event) => setAppointmentEmail(event.target.value)}
                 />
               </label>
               <label>
@@ -425,7 +522,9 @@ export default function CalendarPage() {
               >
                 Cancelar
               </button>
-              <button>Salvar compromisso</button>
+              <button disabled={savingAppointment}>
+                {savingAppointment ? 'Salvando...' : 'Salvar compromisso'}
+              </button>
             </footer>
           </form>
         )}

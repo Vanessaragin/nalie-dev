@@ -1,17 +1,19 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import ClientCalendarPage from './page';
 
 describe('ClientCalendarPage', () => {
   it('starts without demonstrative company events or chat', () => {
     render(<ClientCalendarPage />);
-    expect(screen.queryByText('Vencimento do pacote Gestão')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Vencimento do pacote Gestão'),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText('Chat privado com Vanessa'),
     ).not.toBeInTheDocument();
   });
 
-  it('adds an appointment to the calendar and reminder', () => {
+  it('does not pretend an appointment was saved when the database rejects it', async () => {
     render(<ClientCalendarPage />);
     fireEvent.click(
       screen.getByRole('button', { name: '＋ Adicionar compromisso' }),
@@ -26,7 +28,13 @@ describe('ClientCalendarPage', () => {
       target: { value: '16:30' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar compromisso' }));
-    expect(screen.getAllByText('Enviar documentos')).toHaveLength(2);
-    expect(screen.getByText(/Próximo lembrete · dia 26/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Compromisso não salvo',
+      ),
+    );
+    expect(
+      screen.queryByText(/Próximo lembrete · dia 26/),
+    ).not.toBeInTheDocument();
   });
 });
