@@ -6,6 +6,7 @@ import styles from './company-switcher.module.css';
 
 export const SELECTED_COMPANY_KEY = 'nalie:selected-company-id';
 export const SELECTED_COMPANY_EVENT = 'nalie-selected-company';
+const ADMINISTRATOR_NAME_KEY = 'nalie:administrator-name';
 
 type CompanyOption = {
   id: string;
@@ -19,8 +20,16 @@ export default function CompanySwitcher({ className }: { className: string }) {
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [administratorName, setAdministratorName] = useState('');
+  const [identityLoaded, setIdentityLoaded] = useState(false);
 
   useEffect(() => {
+    const storage = window.localStorage;
+    const cachedAdministratorName =
+      typeof storage?.getItem === 'function'
+        ? storage.getItem(ADMINISTRATOR_NAME_KEY)
+        : null;
+    if (cachedAdministratorName)
+      queueMicrotask(() => setAdministratorName(cachedAdministratorName));
     async function load() {
       try {
         const supabase = createClient({ detectSessionInUrl: false });
@@ -35,14 +44,19 @@ export default function CompanySwitcher({ className }: { className: string }) {
             .select('display_name')
             .eq('id', authData.user.id)
             .maybeSingle();
-          setAdministratorName(
-            String(
-              profile?.display_name ||
-                authData.user.user_metadata?.display_name ||
-                authData.user.email?.split('@')[0] ||
-                'Administrador',
-            ),
+          const currentAdministratorName = String(
+            profile?.display_name ||
+              authData.user.user_metadata?.display_name ||
+              authData.user.email?.split('@')[0] ||
+              'Administrador',
           );
+          setAdministratorName(currentAdministratorName);
+          if (typeof storage?.setItem === 'function')
+            storage.setItem(ADMINISTRATOR_NAME_KEY, currentAdministratorName);
+        } else {
+          setAdministratorName('');
+          if (typeof storage?.removeItem === 'function')
+            storage.removeItem(ADMINISTRATOR_NAME_KEY);
         }
         const { data, error } = await supabase
           .from('companies')
@@ -78,13 +92,17 @@ export default function CompanySwitcher({ className }: { className: string }) {
             }),
         );
         setCompanies(loaded);
-        const stored = window.localStorage.getItem(SELECTED_COMPANY_KEY);
+        const stored =
+          typeof storage?.getItem === 'function'
+            ? storage.getItem(SELECTED_COMPANY_KEY)
+            : null;
         const next = loaded.some((company) => company.id === stored)
           ? String(stored)
           : (loaded[0]?.id ?? '');
         setSelectedId(next);
         if (next) {
-          window.localStorage.setItem(SELECTED_COMPANY_KEY, next);
+          if (typeof storage?.setItem === 'function')
+            storage.setItem(SELECTED_COMPANY_KEY, next);
           window.dispatchEvent(
             new CustomEvent(SELECTED_COMPANY_EVENT, {
               detail: { companyId: next },
@@ -93,6 +111,8 @@ export default function CompanySwitcher({ className }: { className: string }) {
         }
       } catch {
         setCompanies([]);
+      } finally {
+        setIdentityLoaded(true);
       }
     }
     void load();
@@ -115,6 +135,13 @@ export default function CompanySwitcher({ className }: { className: string }) {
           <div className={styles.companyIdentity}>
             <b>{administratorName}</b>
             <small>Administrador da plataforma</small>
+          </div>
+        </div>
+      ) : !identityLoaded ? (
+        <div className={className} aria-label="Carregando usuário atual">
+          <div className={styles.companyIdentity}>
+            <b>Carregando usuário...</b>
+            <small>Identificando acesso</small>
           </div>
         </div>
       ) : (

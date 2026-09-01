@@ -749,9 +749,7 @@ export default function AnalysisWorkspacePage() {
                       setSelectedCompanyId(event.target.value)
                     }
                   >
-                    <option value="" disabled>
-                      Selecione um cliente ou empresa
-                    </option>
+                    <option value="">Selecione um cliente ou empresa</option>
                     {analysisCompanies.map((company) => (
                       <option key={company.id} value={company.id}>
                         {company.company}
