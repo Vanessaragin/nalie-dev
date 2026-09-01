@@ -52,7 +52,9 @@ export async function GET() {
       .order('occurred_at', { ascending: false }),
     access.admin
       .from('admin_activities')
-      .select('id,activity_type,title,due_at,priority,owner_name,completed')
+      .select(
+        'id,activity_type,title,due_at,priority,owner_name,completed,metadata',
+      )
       .order('due_at', { ascending: true }),
   ]);
   if (clientResult.error || adminResult.error)
@@ -160,5 +162,51 @@ export async function DELETE(request: Request) {
       { error: 'Atividade não encontrada.' },
       { status: 404 },
     );
+  return NextResponse.json({ ok: true });
+}
+
+export async function PATCH(request: Request) {
+  const access = await authorizedClients();
+  if (!access)
+    return NextResponse.json(
+      { error: 'Acesso não autorizado.' },
+      { status: 403 },
+    );
+  const body = (await request.json()) as { id?: string; stage?: string };
+  const rawId = body.id?.replace(/^ADMIN-/, '') ?? '';
+  const stages = ['A fazer', 'Em andamento', 'Aguardando', 'Concluído'];
+  if (!/^\d+$/.test(rawId) || !stages.includes(body.stage ?? ''))
+    return NextResponse.json(
+      { error: 'Etapa da atividade inválida.' },
+      { status: 400 },
+    );
+  const administrator = body.id?.startsWith('ADMIN-') === true;
+  const table = administrator ? 'admin_activities' : 'client_activities';
+  const { data: current, error: readError } = await access.admin
+    .from(table)
+    .select('metadata')
+    .eq('id', rawId)
+    .maybeSingle();
+  if (readError)
+    return NextResponse.json({ error: readError.message }, { status: 500 });
+  if (!current)
+    return NextResponse.json(
+      { error: 'Atividade não encontrada.' },
+      { status: 404 },
+    );
+  const metadata = {
+    ...((current.metadata as Record<string, unknown> | null) ?? {}),
+    workflowStage: body.stage,
+    completed: body.stage === 'Concluído',
+  };
+  const { error } = await access.admin
+    .from(table)
+    .update({
+      metadata,
+      completed: administrator ? body.stage === 'Concluído' : undefined,
+    })
+    .eq('id', rawId);
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

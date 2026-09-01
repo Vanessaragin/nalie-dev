@@ -306,6 +306,7 @@ export default function CrmPage() {
           priority: string;
           owner_name: string;
           completed: boolean;
+          metadata: Record<string, unknown>;
         };
         const supabase = createClient({ detectSessionInUrl: false });
         const [
@@ -428,6 +429,19 @@ export default function CrmPage() {
         const adminActivities = activitiesResponse.ok
           ? (activitiesResponse.data.adminActivities ?? [])
           : [];
+        const persistedStages: Record<string, WorkflowStage> = {};
+        for (const activity of activities) {
+          if (activity.kind !== 'NEXT_ACTION') continue;
+          const stage = activity.metadata.workflowStage;
+          if (workflowStages.includes(stage as WorkflowStage))
+            persistedStages[String(activity.id)] = stage as WorkflowStage;
+        }
+        for (const activity of adminActivities) {
+          const stage = activity.metadata?.workflowStage;
+          if (workflowStages.includes(stage as WorkflowStage))
+            persistedStages[`ADMIN-${activity.id}`] = stage as WorkflowStage;
+        }
+        setActivityStages(persistedStages);
         const records = (kind: string) =>
           activities.filter(
             (activity) =>
@@ -615,7 +629,10 @@ export default function CrmPage() {
       );
   }, [data, search, statusFilter, paymentFilter, pendingFilter, sort]);
 
-  function setActivityStage(actionId: string, stage: WorkflowStage) {
+  async function setActivityStage(actionId: string, stage: WorkflowStage) {
+    const action = data.nextActions.find((item) => item.id === actionId);
+    const previousStage =
+      activityStages[actionId] ?? (action?.completed ? 'Concluído' : 'A fazer');
     setActivityStages((current) => ({ ...current, [actionId]: stage }));
     setData((current) => ({
       ...current,
@@ -625,7 +642,34 @@ export default function CrmPage() {
           : action,
       ),
     }));
-    setNotice(`Atividade movida para ${stage}.`);
+    try {
+      const response = await fetch('/api/admin/activities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: actionId, stage }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? 'Falha ao atualizar.');
+      setNotice(`Atividade movida para ${stage} e salva no banco.`);
+    } catch (error) {
+      setActivityStages((current) => ({
+        ...current,
+        [actionId]: previousStage,
+      }));
+      setData((current) => ({
+        ...current,
+        nextActions: current.nextActions.map((item) =>
+          item.id === actionId
+            ? { ...item, completed: previousStage === 'Concluído' }
+            : item,
+        ),
+      }));
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível salvar a etapa.',
+      );
+    }
   }
 
   async function deleteActivity(actionId: string, title: string) {
@@ -682,10 +726,12 @@ export default function CrmPage() {
     const contractValue = Number(form.get('contractValue'));
     if (
       contracted &&
-      (!String(form.get('contractedService')).trim() || contractValue <= 0)
+      (!String(form.get('contractedService')).trim() ||
+        !Number.isFinite(contractValue) ||
+        contractValue < 0)
     ) {
       setFormError(
-        'Para liberar o acesso, informe o serviço contratado e um valor maior que zero.',
+        'Para liberar o acesso, informe o serviço contratado. O valor pode ser zero ou maior.',
       );
       setSavingClient(false);
       return;
@@ -729,8 +775,8 @@ export default function CrmPage() {
                 email: String(form.get('email')),
               },
               {
-                name: String(form.get('user2Name')),
-                email: String(form.get('user2Email')),
+                name: String(form.get('user2Name') ?? ''),
+                email: String(form.get('user2Email') ?? ''),
               },
             ].filter((user) => user.name.trim() || user.email.trim()),
           }),
@@ -1178,7 +1224,7 @@ export default function CrmPage() {
                           type="checkbox"
                           checked={stage === 'Concluído'}
                           onChange={(event) =>
-                            setActivityStage(
+                            void setActivityStage(
                               action.id,
                               event.target.checked ? 'Concluído' : 'A fazer',
                             )
@@ -1208,7 +1254,7 @@ export default function CrmPage() {
                         <button
                           disabled={index === 0}
                           onClick={() =>
-                            setActivityStage(
+                            void setActivityStage(
                               action.id,
                               workflowStages[index - 1],
                             )
@@ -1221,7 +1267,7 @@ export default function CrmPage() {
                           aria-label={`Etapa de ${action.title}`}
                           value={stage}
                           onChange={(event) =>
-                            setActivityStage(
+                            void setActivityStage(
                               action.id,
                               event.target.value as WorkflowStage,
                             )
@@ -1234,7 +1280,7 @@ export default function CrmPage() {
                         <button
                           disabled={index === workflowStages.length - 1}
                           onClick={() =>
-                            setActivityStage(
+                            void setActivityStage(
                               action.id,
                               workflowStages[index + 1],
                             )
@@ -1770,7 +1816,7 @@ function ModalFields({
           </div>
         </fieldset>
 
-        {!client ? (
+        {!client || !client.portalUsers?.length ? (
           <fieldset className={styles.formSection}>
             <legend>5. Usuário extra (opcional)</legend>
             <p>
