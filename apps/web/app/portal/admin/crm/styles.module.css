@@ -602,6 +602,11 @@
   display: grid;
   gap: 10px;
   margin: 14px 0;
+  max-height: 320px;
+  padding-right: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .clientActionList > div {
   display: grid;

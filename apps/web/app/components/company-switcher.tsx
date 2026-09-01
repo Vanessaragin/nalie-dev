@@ -18,11 +18,32 @@ export default function CompanySwitcher({ className }: { className: string }) {
   const [open, setOpen] = useState(false);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [selectedId, setSelectedId] = useState('');
+  const [administratorName, setAdministratorName] = useState('');
 
   useEffect(() => {
     async function load() {
       try {
         const supabase = createClient({ detectSessionInUrl: false });
+        const [{ data: authData }, { data: isAdministrator }] =
+          await Promise.all([
+            supabase.auth.getUser(),
+            supabase.rpc('is_super_admin'),
+          ]);
+        if (isAdministrator && authData.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', authData.user.id)
+            .maybeSingle();
+          setAdministratorName(
+            String(
+              profile?.display_name ||
+                authData.user.user_metadata?.display_name ||
+                authData.user.email?.split('@')[0] ||
+                'Administrador',
+            ),
+          );
+        }
         const { data, error } = await supabase
           .from('companies')
           .select('id,display_name,legal_document')
@@ -95,11 +116,17 @@ export default function CompanySwitcher({ className }: { className: string }) {
         onClick={() => setOpen((current) => !current)}
       >
         <div className={styles.companyIdentity}>
-          <b>{selected?.display_name ?? 'Selecione uma empresa'}</b>
+          <b>
+            {administratorName ||
+              selected?.display_name ||
+              'Selecione uma empresa'}
+          </b>
           <small>
-            {selected
-              ? `${selected.active_users} usuário${selected.active_users === 1 ? '' : 's'} ativo${selected.active_users === 1 ? '' : 's'}`
-              : 'Nenhuma empresa disponível'}
+            {administratorName
+              ? 'Administrador da plataforma'
+              : selected
+                ? `${selected.active_users} usuário${selected.active_users === 1 ? '' : 's'} ativo${selected.active_users === 1 ? '' : 's'}`
+                : 'Nenhuma empresa disponível'}
           </small>
         </div>
         <span>{open ? '⌃' : '⌄'}</span>
