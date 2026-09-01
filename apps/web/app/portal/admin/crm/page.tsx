@@ -1538,13 +1538,7 @@ export default function CrmPage() {
                 >
                   ＋ Próxima ação
                 </button>
-                {[
-                  'Lead',
-                  'Em contato',
-                  'Cotação solicitada',
-                  'Proposta enviada',
-                  'Em negociação',
-                ].includes(selected.contactStatus) && (
+                {selected.clientStatus === 'Não contratado' && (
                   <button
                     onClick={() => {
                       setNotice(

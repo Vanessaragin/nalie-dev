@@ -309,21 +309,29 @@ export default function AnalysisWorkspacePage() {
         const supabase = createClient({ detectSessionInUrl: false });
         const recentImportDate = new Date();
         recentImportDate.setDate(recentImportDate.getDate() - 30);
-        const [eventsResult, importsResult] = await Promise.all([
-          supabase
-            .from('calendar_events')
-            .select('id,title,starts_at')
-            .gte('starts_at', new Date().toISOString())
-            .order('starts_at', { ascending: true })
-            .limit(5),
-          supabase
-            .from('import_batches')
-            .select('id,original_filename,imported_at')
-            .is('deleted_at', null)
-            .gte('imported_at', recentImportDate.toISOString())
-            .order('imported_at', { ascending: false })
-            .limit(5),
-        ]);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        const [eventsResult, importsResult, paymentsResult] = await Promise.all(
+          [
+            supabase
+              .from('calendar_events')
+              .select('id,title,starts_at,billing_payment_id')
+              .gte('starts_at', ninetyDaysAgo.toISOString())
+              .order('starts_at', { ascending: true })
+              .limit(100),
+            supabase
+              .from('import_batches')
+              .select('id,original_filename,imported_at')
+              .is('deleted_at', null)
+              .gte('imported_at', recentImportDate.toISOString())
+              .order('imported_at', { ascending: false })
+              .limit(5),
+            supabase
+              .from('service_payments')
+              .select('id,due_date,payment_status')
+              .not('payment_status', 'in', '(PAID,RECEIVED)'),
+          ],
+        );
         if (!active) return;
         const calendarHref = canManageAnalysis
           ? '/portal/calendario'
@@ -336,8 +344,26 @@ export default function AnalysisWorkspacePage() {
         });
         const items: PortalNotification[] = [];
         if (!eventsResult.error) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const sevenDaysFromNow = new Date(today);
+          sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+          const pendingPayments = new Map(
+            (paymentsResult.data ?? []).map((payment) => [payment.id, payment]),
+          );
+          const relevantEvents = (eventsResult.data ?? []).filter((event) => {
+            const eventDate = new Date(event.starts_at);
+            eventDate.setHours(0, 0, 0, 0);
+            if (event.billing_payment_id) {
+              const payment = pendingPayments.get(event.billing_payment_id);
+              if (!payment) return false;
+              const dueDate = new Date(`${payment.due_date}T12:00:00`);
+              return dueDate <= sevenDaysFromNow;
+            }
+            return eventDate.getTime() === today.getTime();
+          });
           items.push(
-            ...(eventsResult.data ?? []).map((event) => ({
+            ...relevantEvents.map((event) => ({
               id: `event-${event.id}`,
               icon: '📅',
               title: event.title,

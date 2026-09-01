@@ -91,6 +91,7 @@ export default function AdminPage() {
         const [
           usersResult,
           companiesResult,
+          crmResult,
           importsResult,
           lastImportResult,
           downloadsResult,
@@ -100,6 +101,7 @@ export default function AdminPage() {
             .from('companies')
             .select('id,created_at,status,entity_type')
             .eq('status', 'ACTIVE'),
+          supabase.from('client_crm').select('company_id,client_status'),
           supabase
             .from('import_batches')
             .select('id', { count: 'exact', head: true })
@@ -120,6 +122,14 @@ export default function AdminPage() {
         const { data, error } = usersResult;
         if (error) throw error;
         const companyRows = companiesResult.data ?? [];
+        const contractedCompanyIds = new Set(
+          (crmResult.data ?? [])
+            .filter((row) => row.client_status !== 'Não contratado')
+            .map((row) => row.company_id),
+        );
+        const contractedCompanies = companyRows.filter((company) =>
+          contractedCompanyIds.has(company.id),
+        );
         const activeUsers = (data ?? []).filter(
           (row: { membership_status: string }) =>
             row.membership_status === 'ACTIVE',
@@ -130,14 +140,16 @@ export default function AdminPage() {
         ).length;
         const lastImportedAt = lastImportResult.data?.imported_at;
         setMetrics({
-          activeCompanies: companyRows.filter(
+          activeCompanies: contractedCompanies.filter(
             (company) => company.entity_type !== 'personal',
           ).length,
-          activePeople: companyRows.filter(
+          activePeople: contractedCompanies.filter(
             (company) => company.entity_type === 'personal',
           ).length,
-          newCompanies: companyRows.filter(
-            (company) => new Date(company.created_at) >= monthStart,
+          newCompanies: contractedCompanies.filter(
+            (company) =>
+              company.entity_type !== 'personal' &&
+              new Date(company.created_at) >= monthStart,
           ).length,
           activeUsers,
           suspendedUsers,
