@@ -45,6 +45,7 @@ export type CrmClient = {
   serviceInterest: string;
   contractedService: string;
   startDate: string;
+  firstBillingDate?: string;
   contractValue: number;
   periodicity: string;
   dashboardUrl: string;

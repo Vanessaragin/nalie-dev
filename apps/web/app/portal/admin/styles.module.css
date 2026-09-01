@@ -509,7 +509,7 @@
 .userRow {
   min-width: 1120px;
   display: grid;
-  grid-template-columns: 1.5fr 1fr 0.8fr 0.9fr 0.65fr 1fr 0.65fr;
+  grid-template-columns: 1.5fr 1fr 0.8fr 0.9fr 0.8fr 0.65fr;
   gap: 14px;
   align-items: center;
 }

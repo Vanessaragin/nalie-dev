@@ -94,6 +94,12 @@ function formatDate(value?: string) {
   ).toLocaleDateString('pt-BR');
 }
 
+function firstDayOfNextMonth() {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1, 1);
+  return date.toISOString().slice(0, 10);
+}
+
 async function persistAnalysisLinks(client: CrmClient, form: FormData) {
   if (!client.companyId) return;
   const supabase = createClient();
@@ -314,6 +320,7 @@ export default function CrmPage() {
           crmResult,
           membershipsResult,
           linksResult,
+          subscriptionsResult,
           activitiesResponse,
         ] = await Promise.all([
           supabase
@@ -334,6 +341,10 @@ export default function CrmPage() {
             .select(
               'company_id,link_type,display_name,source_url,access_scope',
             ),
+          supabase
+            .from('service_subscriptions')
+            .select('company_id,starts_on,active')
+            .eq('active', true),
           fetch('/api/admin/activities').then(async (response) => ({
             ok: response.ok,
             data: (await response.json()) as {
@@ -358,6 +369,12 @@ export default function CrmPage() {
           current.push(link);
           linksByCompany.set(link.company_id, current);
         }
+        const subscriptionsByCompany = new Map(
+          (subscriptionsResult.data ?? []).map((subscription) => [
+            subscription.company_id,
+            subscription,
+          ]),
+        );
         const clients: CrmClient[] = (companiesResult.data ?? []).map(
           (company) => {
             const crm = crms.get(company.id) as
@@ -401,6 +418,9 @@ export default function CrmPage() {
               serviceInterest: String(crm?.service_interest ?? ''),
               contractedService: String(crm?.contracted_service ?? ''),
               startDate: String(crm?.service_start_date ?? ''),
+              firstBillingDate: String(
+                subscriptionsByCompany.get(company.id)?.starts_on ?? '',
+              ),
               contractValue: Number(crm?.contract_value ?? 0),
               periodicity: String(crm?.periodicity ?? 'Mensal'),
               dashboardUrl: byType('DASHBOARD')?.source_url ?? '',
@@ -741,7 +761,7 @@ export default function CrmPage() {
     let portalUsers =
       editingClient && selected ? selected.portalUsers : undefined;
     const needsAccess = contracted && !portalUsers?.length;
-    if (!editingClient || needsAccess) {
+    {
       setNotice('');
       try {
         const response = await fetch('/api/admin/companies', {
@@ -749,7 +769,7 @@ export default function CrmPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             companyId: editingClient ? companyId : undefined,
-            provisionAccess: contracted,
+            provisionAccess: needsAccess,
             personType: String(form.get('personType')),
             name: String(form.get('name')),
             company: String(form.get('company') ?? form.get('name')),
@@ -759,6 +779,7 @@ export default function CrmPage() {
             contractedService: String(form.get('contractedService')),
             contractValue,
             startDate: String(form.get('startDate')),
+            firstBillingDate: String(form.get('firstBillingDate')),
             periodicity: String(form.get('periodicity')),
             phone: phoneDigits(form.get('phone')),
             whatsapp: phoneDigits(form.get('whatsapp')),
@@ -792,7 +813,7 @@ export default function CrmPage() {
           return;
         }
         companyId = result.companyId;
-        portalUsers = result.users;
+        if (result.users?.length) portalUsers = result.users;
       } catch {
         setFormError('Não foi possível conectar ao cadastro seguro.');
         setSavingClient(false);
@@ -823,6 +844,7 @@ export default function CrmPage() {
       serviceInterest: String(form.get('serviceInterest')),
       contractedService: String(form.get('contractedService')),
       startDate: String(form.get('startDate')),
+      firstBillingDate: String(form.get('firstBillingDate')),
       contractValue,
       periodicity: String(form.get('periodicity')),
       dashboardUrl:
@@ -1794,6 +1816,17 @@ function ModalFields({
                 step="0.01"
                 defaultValue={client?.contractValue}
               />
+            </label>
+            <label>
+              Primeiro vencimento
+              <input
+                name="firstBillingDate"
+                type="date"
+                defaultValue={client?.firstBillingDate || firstDayOfNextMonth()}
+              />
+              <small>
+                Sugerido automaticamente para o dia 1º do próximo mês.
+              </small>
             </label>
             <label>
               Tipo da cobrança

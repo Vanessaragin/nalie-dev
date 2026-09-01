@@ -734,14 +734,23 @@ export default function AnalysisWorkspacePage() {
               </div>
             ) : (
               <>
-                <div className={styles.biEmpty}>
-                  <span>📊</span>
-                  <h2>Seu painel está em produção</h2>
-                  <p>
-                    Assim que a análise for concluída, o BI será publicado nesta
-                    área. Em caso de dúvidas, procure o seu consultor.
-                  </p>
-                </div>
+                {selectedCompany.dashboardUrl ? (
+                  <iframe
+                    className={styles.biFrame}
+                    src={selectedCompany.dashboardUrl}
+                    title={`BI de ${selectedCompany.company}`}
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className={styles.biEmpty}>
+                    <span>📊</span>
+                    <h2>Seu painel está em produção</h2>
+                    <p>
+                      Assim que a análise for concluída, o BI será publicado
+                      nesta área. Em caso de dúvidas, procure o seu consultor.
+                    </p>
+                  </div>
+                )}
                 <article className={styles.presentationPanel}>
                   <div>
                     <span>📑</span>
@@ -751,15 +760,24 @@ export default function AnalysisWorkspacePage() {
                       empresa.
                     </p>
                   </div>
-                  <div className={styles.presentationEmpty}>
-                    <span>📑</span>
-                    <h2>Sua apresentação está em produção</h2>
-                    <p>
-                      Assim que a análise for concluída, a apresentação será
-                      publicada nesta área. Em caso de dúvidas, procure o seu
-                      consultor.
-                    </p>
-                  </div>
+                  {selectedCompany.presentationUrl ? (
+                    <iframe
+                      className={styles.biFrame}
+                      src={selectedCompany.presentationUrl}
+                      title={`Apresentação de ${selectedCompany.company}`}
+                      allowFullScreen
+                    />
+                  ) : (
+                    <div className={styles.presentationEmpty}>
+                      <span>📑</span>
+                      <h2>Sua apresentação está em produção</h2>
+                      <p>
+                        Assim que a análise for concluída, a apresentação será
+                        publicada nesta área. Em caso de dúvidas, procure o seu
+                        consultor.
+                      </p>
+                    </div>
+                  )}
                 </article>
                 <article className={styles.excelPanel}>
                   <div>

@@ -20,6 +20,7 @@ type CompanyBody = {
   contractedService?: string;
   contractValue?: number;
   startDate?: string;
+  firstBillingDate?: string;
   periodicity?: string;
   phone?: string;
   whatsapp?: string;
@@ -324,16 +325,21 @@ export async function POST(request: Request) {
     if (crmError) throw crmError;
 
     const contractValue = Number(body.contractValue ?? 0);
-    if (provisionAccess && contractValue > 0) {
+    const contracted = body.clientStatus !== 'Não contratado';
+    if (contracted && contractValue >= 0) {
       const frequency =
         body.periodicity === 'Semanal'
           ? 'WEEKLY'
           : body.periodicity === 'Quinzenal'
             ? 'BIWEEKLY'
             : 'MONTHLY';
-      const startsOn = /^\d{4}-\d{2}-\d{2}$/.test(body.startDate ?? '')
-        ? body.startDate!
-        : new Date().toISOString().slice(0, 10);
+      const startsOn = /^\d{4}-\d{2}-\d{2}$/.test(body.firstBillingDate ?? '')
+        ? body.firstBillingDate!
+        : (() => {
+            const nextMonth = new Date();
+            nextMonth.setMonth(nextMonth.getMonth() + 1, 1);
+            return nextMonth.toISOString().slice(0, 10);
+          })();
       const billingDay = Math.min(
         28,
         Math.max(1, Number(startsOn.slice(8, 10))),
@@ -341,21 +347,48 @@ export async function POST(request: Request) {
       const accessUntil = new Date(`${startsOn}T12:00:00`);
       accessUntil.setMonth(accessUntil.getMonth() + 1);
       accessUntil.setDate(accessUntil.getDate() - 1);
-      const { error: subscriptionError } = await adminClient
-        .from('service_subscriptions')
-        .insert({
-          company_id: companyId,
-          package_code: 'MANAGEMENT',
-          customer_type: body.personType === 'physical' ? 'PERSON' : 'COMPANY',
-          billing_frequency: frequency,
-          recurring_amount: contractValue,
-          billing_day: billingDay,
-          starts_on: startsOn,
-          access_until: accessUntil.toISOString().slice(0, 10),
-          active: true,
-          created_by: claims.claims.sub,
-        });
+      const subscriptionValues = {
+        company_id: companyId,
+        package_code: 'MANAGEMENT',
+        customer_type: body.personType === 'physical' ? 'PERSON' : 'COMPANY',
+        billing_frequency: frequency,
+        recurring_amount: contractValue,
+        billing_day: billingDay,
+        starts_on: startsOn,
+        access_until: accessUntil.toISOString().slice(0, 10),
+        active: true,
+        created_by: claims.claims.sub,
+      };
+      const { data: currentSubscription, error: currentSubscriptionError } =
+        await adminClient
+          .from('service_subscriptions')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('active', true)
+          .maybeSingle();
+      if (currentSubscriptionError) throw currentSubscriptionError;
+      const subscriptionResult = currentSubscription
+        ? await adminClient
+            .from('service_subscriptions')
+            .update(subscriptionValues)
+            .eq('id', currentSubscription.id)
+        : await adminClient
+            .from('service_subscriptions')
+            .insert(subscriptionValues);
+      const subscriptionError = subscriptionResult.error;
       if (subscriptionError) throw subscriptionError;
+      if (currentSubscription) {
+        const { error: paymentError } = await adminClient
+          .from('service_payments')
+          .update({
+            amount: contractValue,
+            due_date: startsOn,
+            service_name: body.contractedService?.trim() || 'Serviço Nalie',
+          })
+          .eq('subscription_id', currentSubscription.id)
+          .eq('is_prelaunch', true);
+        if (paymentError) throw paymentError;
+      }
     }
 
     return NextResponse.json({

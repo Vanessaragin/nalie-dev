@@ -36,6 +36,7 @@ const seedUsers: AdminUser[] = [];
 
 type AdminMetrics = {
   activeCompanies: number;
+  activePeople: number;
   newCompanies: number;
   activeUsers: number;
   suspendedUsers: number;
@@ -46,6 +47,7 @@ type AdminMetrics = {
 
 const emptyMetrics: AdminMetrics = {
   activeCompanies: 0,
+  activePeople: 0,
   newCompanies: 0,
   activeUsers: 0,
   suspendedUsers: 0,
@@ -96,7 +98,7 @@ export default function AdminPage() {
           supabase.rpc('admin_list_company_users'),
           supabase
             .from('companies')
-            .select('id,created_at,status')
+            .select('id,created_at,status,entity_type')
             .eq('status', 'ACTIVE'),
           supabase
             .from('import_batches')
@@ -128,7 +130,12 @@ export default function AdminPage() {
         ).length;
         const lastImportedAt = lastImportResult.data?.imported_at;
         setMetrics({
-          activeCompanies: companyRows.length,
+          activeCompanies: companyRows.filter(
+            (company) => company.entity_type !== 'personal',
+          ).length,
+          activePeople: companyRows.filter(
+            (company) => company.entity_type === 'personal',
+          ).length,
           newCompanies: companyRows.filter(
             (company) => new Date(company.created_at) >= monthStart,
           ).length,
@@ -198,13 +205,6 @@ export default function AdminPage() {
       'atividades-crm-nalie.csv',
     );
     setActivityFeedback('Histórico do CRM exportado com sucesso.');
-  }
-
-  function openPasswordReset(user: AdminUser) {
-    setResetUser(resetUserLabel(user));
-    document
-      .getElementById('password-reset')
-      ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }
 
   async function changeUserAccess(index: number, requestedAccess: string) {
@@ -494,6 +494,11 @@ export default function AdminPage() {
             <small>＋ {metrics.newCompanies} neste mês</small>
           </article>
           <article>
+            <span>Pessoas físicas ativas</span>
+            <strong>{metrics.activePeople}</strong>
+            <small>Cadastros PF separados das empresas</small>
+          </article>
+          <article>
             <span>Usuários ativos</span>
             <strong>{metrics.activeUsers}</strong>
             <small>{metrics.suspendedUsers} acessos suspensos</small>
@@ -528,7 +533,6 @@ export default function AdminPage() {
                 <span>Último login</span>
                 <span>Última importação</span>
                 <span>Acesso</span>
-                <span>Senha</span>
                 <span>Status</span>
               </div>
               {users.map((user, index) => (
@@ -569,14 +573,6 @@ export default function AdminPage() {
                       </small>
                     )}
                   </div>
-                  <button
-                    className={styles.password}
-                    onClick={() => openPasswordReset(user)}
-                    aria-label={`Redefinir senha de ${user.name}`}
-                  >
-                    {user.password}
-                    <small>Redefinir senha →</small>
-                  </button>
                   <button
                     aria-label={`${statuses[index] ? 'Desativar' : 'Ativar'} ${user.name}`}
                     className={statuses[index] ? styles.on : styles.off}

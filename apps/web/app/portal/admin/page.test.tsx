@@ -20,6 +20,6 @@ describe('AdminPage', () => {
     expect(screen.queryByText('Marina Costa')).not.toBeInTheDocument();
     expect(screen.queryByText('127')).not.toBeInTheDocument();
     expect(screen.queryByText('46')).not.toBeInTheDocument();
-    expect(screen.getAllByText('0')).toHaveLength(4);
+    expect(screen.getAllByText('0')).toHaveLength(5);
   });
 });
