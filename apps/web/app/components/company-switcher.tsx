@@ -29,14 +29,32 @@ export default function CompanySwitcher({ className }: { className: string }) {
           .eq('status', 'ACTIVE')
           .order('display_name');
         if (error) throw error;
+        const companyRows = data ?? [];
+        const { data: crmRows, error: crmError } = companyRows.length
+          ? await supabase
+              .from('client_crm')
+              .select('company_id,client_status')
+              .in(
+                'company_id',
+                companyRows.map((company) => company.id),
+              )
+          : { data: [], error: null };
+        if (crmError) throw crmError;
+        const contractedCompanyIds = new Set(
+          (crmRows ?? [])
+            .filter((row) => row.client_status !== 'Não contratado')
+            .map((row) => row.company_id),
+        );
         const loaded = await Promise.all(
-          (data ?? []).map(async (company) => {
-            const { data: count } = await supabase.rpc(
-              'active_company_user_count',
-              { target_company_id: company.id },
-            );
-            return { ...company, active_users: Number(count ?? 0) };
-          }),
+          companyRows
+            .filter((company) => contractedCompanyIds.has(company.id))
+            .map(async (company) => {
+              const { data: count } = await supabase.rpc(
+                'active_company_user_count',
+                { target_company_id: company.id },
+              );
+              return { ...company, active_users: Number(count ?? 0) };
+            }),
         );
         setCompanies(loaded);
         const stored = window.localStorage.getItem(SELECTED_COMPANY_KEY);
@@ -87,14 +105,24 @@ export default function CompanySwitcher({ className }: { className: string }) {
         <span>{open ? '⌃' : '⌄'}</span>
       </button>
       {open && (
-        <div role="dialog" aria-label="Empresa selecionada" className={styles.selector}>
+        <div
+          role="dialog"
+          aria-label="Empresa selecionada"
+          className={styles.selector}
+        >
           {companies.length === 0 ? (
             <small>Nenhuma empresa vinculada a este usuário.</small>
           ) : (
             companies.map((company) => (
-              <button type="button" key={company.id} onClick={() => selectCompany(company.id)}>
+              <button
+                type="button"
+                key={company.id}
+                onClick={() => selectCompany(company.id)}
+              >
                 <b>{company.display_name}</b>
-                <small>{company.legal_document || 'Documento não informado'}</small>
+                <small>
+                  {company.legal_document || 'Documento não informado'}
+                </small>
               </button>
             ))
           )}

@@ -140,7 +140,7 @@ export default function AnalysisWorkspacePage() {
           : supabase.rpc('current_company_id');
         const companyResult = await companyQuery;
         if (companyResult.error) throw companyResult.error;
-        const companies = canManageAnalysis
+        let companies = canManageAnalysis
           ? ((companyResult.data ?? []) as Array<{
               id: string;
               display_name: string;
@@ -154,6 +154,24 @@ export default function AnalysisWorkspacePage() {
             .single();
           if (ownCompanyError) throw ownCompanyError;
           companies.push(ownCompany);
+        }
+        if (companies.length) {
+          const { data: crmRows, error: crmError } = await supabase
+            .from('client_crm')
+            .select('company_id, client_status')
+            .in(
+              'company_id',
+              companies.map((company) => company.id),
+            );
+          if (crmError) throw crmError;
+          const contractedCompanyIds = new Set(
+            (crmRows ?? [])
+              .filter((row) => row.client_status !== 'Não contratado')
+              .map((row) => row.company_id),
+          );
+          companies = companies.filter((company) =>
+            contractedCompanyIds.has(company.id),
+          );
         }
         if (!companies.length) throw new Error('Nenhuma empresa disponível.');
         const { data: links, error: linksError } = await supabase
