@@ -15,6 +15,8 @@ function currentPeriod() {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 }
 type Appointment = {
+  id: string;
+  date: string;
   day: number;
   time: string;
   title: string;
@@ -25,6 +27,13 @@ type Appointment = {
   email: string;
   details?: string;
   location?: string;
+};
+
+type ClientChoice = {
+  id: string;
+  label: string;
+  whatsapp: string;
+  email: string;
 };
 
 const appointments: Appointment[] = [];
@@ -63,20 +72,25 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [priorityFilter, setPriorityFilter] = useState('Todas');
   const [clientFilter, setClientFilter] = useState('Todos');
-  const [clientChoices, setClientChoices] = useState<string[]>([]);
+  const [clientChoices, setClientChoices] = useState<ClientChoice[]>([]);
   const calendarAppointments =
     calendarView === 'general' ? generalItems : personalItems;
   const clientOptions = [
-    ...new Set(calendarAppointments.map((item) => item.client)),
+    ...new Set([
+      ...clientChoices.map((choice) => choice.label),
+      ...calendarAppointments.map((item) => item.client),
+    ]),
   ];
   const visibleAppointments = calendarAppointments.filter(
     (item) =>
+      item.date.startsWith(period) &&
       (selectedDay === null || item.day === selectedDay) &&
       (priorityFilter === 'Todas' || item.priority === priorityFilter) &&
       (clientFilter === 'Todos' || item.client === clientFilter),
   );
   const calendarFilteredAppointments = calendarAppointments.filter(
     (item) =>
+      item.date.startsWith(period) &&
       (priorityFilter === 'Todas' || item.priority === priorityFilter) &&
       (clientFilter === 'Todos' || item.client === clientFilter),
   );
@@ -86,32 +100,125 @@ export default function CalendarPage() {
     (_, index) => index + 1,
   );
   useEffect(() => {
-    async function loadClientChoices() {
+    async function loadCalendar() {
       try {
         const supabase = createClient({ detectSessionInUrl: false });
-        const { data, error } = await supabase.rpc('admin_list_company_users');
-        if (error) throw error;
-        setClientChoices(
-          (data ?? []).map(
-            (row: { company_name: string; profile_name: string; role_name: string }) =>
-              `${row.company_name} | ${row.profile_name} | ${
-                row.role_name === 'COMPANY_ADMIN' ? 'Administrador' : 'Usuário'
-              }`,
-          ),
+        const [companiesResult, crmResult, eventsResult] = await Promise.all([
+          supabase
+            .from('companies')
+            .select('id,display_name,status')
+            .eq('status', 'ACTIVE')
+            .order('display_name'),
+          supabase
+            .from('client_crm')
+            .select(
+              'company_id,contact_name,contact_email,contact_phone,whatsapp,client_status',
+            ),
+          supabase
+            .from('calendar_events')
+            .select(
+              'id,company_id,title,starts_at,suggested_agenda,priority,scope',
+            )
+            .order('starts_at', { ascending: true }),
+        ]);
+        if (companiesResult.error || crmResult.error || eventsResult.error)
+          throw companiesResult.error ?? crmResult.error ?? eventsResult.error;
+
+        const crmByCompany = new Map(
+          (crmResult.data ?? []).map((row) => [row.company_id, row]),
+        );
+        const choices = (companiesResult.data ?? [])
+          .filter((company) => {
+            const status = String(
+              crmByCompany.get(company.id)?.client_status ?? 'Não contratado',
+            );
+            return status !== 'Não contratado';
+          })
+          .map((company) => {
+            const crm = crmByCompany.get(company.id);
+            return {
+              id: company.id,
+              label: String(crm?.contact_name || company.display_name),
+              whatsapp: String(crm?.whatsapp || crm?.contact_phone || ''),
+              email: String(crm?.contact_email || ''),
+            };
+          });
+        const choiceById = new Map(
+          choices.map((choice) => [choice.id, choice]),
+        );
+        const mappedEvents = (eventsResult.data ?? []).flatMap((row) => {
+          const choice = choiceById.get(row.company_id);
+          if (!choice) return [];
+          const startsAt = new Date(String(row.starts_at));
+          const date = `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, '0')}-${String(startsAt.getDate()).padStart(2, '0')}`;
+          const agenda = Array.isArray(row.suggested_agenda)
+            ? row.suggested_agenda.map(String)
+            : [];
+          const priority =
+            row.priority === 'HIGH'
+              ? 'Alta'
+              : row.priority === 'MEDIUM'
+                ? 'Média'
+                : 'Normal';
+          return [
+            {
+              scope: String(row.scope),
+              appointment: {
+                id: String(row.id),
+                date,
+                day: startsAt.getDate(),
+                time: startsAt.toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                title: String(row.title),
+                client: choice.label,
+                priority,
+                tone:
+                  priority === 'Alta'
+                    ? 'high'
+                    : priority === 'Média'
+                      ? 'medium'
+                      : 'normal',
+                whatsapp: choice.whatsapp
+                  ? `https://wa.me/${choice.whatsapp.replace(/\D/g, '')}`
+                  : '',
+                email: choice.email ? `mailto:${choice.email}` : '',
+                details: agenda.join(' · '),
+                location: '',
+              },
+            },
+          ];
+        });
+        setClientChoices(choices);
+        setGeneralItems(
+          mappedEvents
+            .filter((item) => item.scope !== 'PERSONAL')
+            .map((item) => item.appointment),
+        );
+        setPersonalItems(
+          mappedEvents
+            .filter((item) => item.scope === 'PERSONAL')
+            .map((item) => item.appointment),
         );
       } catch {
         setClientChoices([]);
       }
     }
-    void loadClientChoices();
+    void loadCalendar();
   }, []);
   function addAppointment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const title = String(data.get('title'));
-    const client = String(data.get('client'));
+    const clientId = String(data.get('client'));
+    const selectedClient = clientChoices.find(
+      (choice) => choice.id === clientId,
+    );
+    const client = selectedClient?.label ?? 'Agenda pessoal';
     const time = String(data.get('time'));
-    const day = Number(String(data.get('date')).split('-')[2]);
+    const date = String(data.get('date'));
+    const day = Number(date.split('-')[2]);
     const priority = String(data.get('priority'));
     const tone =
       priority === 'Alta' ? 'high' : priority === 'Média' ? 'medium' : 'normal';
@@ -120,6 +227,8 @@ export default function CalendarPage() {
     const details = String(data.get('details'));
     const location = String(data.get('location'));
     const item = {
+      id: `local-${Date.now()}`,
+      date,
       day,
       time,
       title,
@@ -219,8 +328,8 @@ export default function CalendarPage() {
                     Selecione empresa, pessoa e perfil
                   </option>
                   {clientChoices.map((choice) => (
-                    <option key={choice} value={choice}>
-                      {choice}
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label}
                     </option>
                   ))}
                   <option value="Agenda pessoal">Agenda pessoal</option>
@@ -565,11 +674,11 @@ export default function CalendarPage() {
               </article>
             ))}
             {visibleAppointments.length === 0 && (
-                <p className={styles.noAppointments}>
-                  Nenhum compromisso corresponde ao cliente, prioridade e dia
-                  selecionados.
-                </p>
-              )}
+              <p className={styles.noAppointments}>
+                Nenhum compromisso corresponde ao cliente, prioridade e dia
+                selecionados.
+              </p>
+            )}
             <div className={styles.suggestion}>
               <span>✦</span>
               <p>
