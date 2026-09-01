@@ -110,28 +110,31 @@ export default function CompanySwitcher({ className }: { className: string }) {
 
   return (
     <div className={styles.accountCard}>
-      <button
-        className={className}
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <div className={styles.companyIdentity}>
-          <b>
-            {administratorName ||
-              selected?.display_name ||
-              'Selecione uma empresa'}
-          </b>
-          <small>
-            {administratorName
-              ? 'Administrador da plataforma'
-              : selected
+      {administratorName ? (
+        <div className={className}>
+          <div className={styles.companyIdentity}>
+            <b>{administratorName}</b>
+            <small>Administrador da plataforma</small>
+          </div>
+        </div>
+      ) : (
+        <button
+          className={className}
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <div className={styles.companyIdentity}>
+            <b>{selected?.display_name || 'Selecione uma empresa'}</b>
+            <small>
+              {selected
                 ? `${selected.active_users} usuário${selected.active_users === 1 ? '' : 's'} ativo${selected.active_users === 1 ? '' : 's'}`
                 : 'Nenhuma empresa disponível'}
-          </small>
-        </div>
-        <span>{open ? '⌃' : '⌄'}</span>
-      </button>
-      {open && (
+            </small>
+          </div>
+          <span>{open ? '⌃' : '⌄'}</span>
+        </button>
+      )}
+      {!administratorName && open && (
         <div
           role="dialog"
           aria-label="Empresa selecionada"

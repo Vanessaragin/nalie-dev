@@ -737,16 +737,13 @@ export default function AnalysisWorkspacePage() {
             <div className={styles.biHeader}>
               <div>
                 <h2>Business Intelligence do cliente</h2>
-                <p>
-                  Conteúdo de <strong>{selectedCompany.company}</strong>. Uma
-                  empresa é exibida por vez.
-                </p>
+                <p>Conteúdo do cliente ou empresa selecionada.</p>
               </div>
               {canManageAnalysis ? (
                 <label className={styles.companyFilter}>
-                  Empresa analisada
+                  Cliente ou empresa analisada
                   <select
-                    aria-label="Empresa analisada"
+                    aria-label="Cliente ou empresa analisada"
                     value={selectedCompanyId}
                     onChange={(event) =>
                       setSelectedCompanyId(event.target.value)
