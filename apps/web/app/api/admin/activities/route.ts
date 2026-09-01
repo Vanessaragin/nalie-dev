@@ -172,10 +172,17 @@ export async function PATCH(request: Request) {
       { error: 'Acesso não autorizado.' },
       { status: 403 },
     );
-  const body = (await request.json()) as { id?: string; stage?: string };
+  const body = (await request.json()) as ActivityBody & {
+    id?: string;
+    stage?: string;
+  };
   const rawId = body.id?.replace(/^ADMIN-/, '') ?? '';
   const stages = ['A fazer', 'Em andamento', 'Aguardando', 'Concluído'];
-  if (!/^\d+$/.test(rawId) || !stages.includes(body.stage ?? ''))
+  const editingDetails = body.title !== undefined;
+  if (
+    !/^\d+$/.test(rawId) ||
+    (!editingDetails && !stages.includes(body.stage ?? ''))
+  )
     return NextResponse.json(
       { error: 'Etapa da atividade inválida.' },
       { status: 400 },
@@ -196,15 +203,54 @@ export async function PATCH(request: Request) {
     );
   const metadata = {
     ...((current.metadata as Record<string, unknown> | null) ?? {}),
-    workflowStage: body.stage,
-    completed: body.stage === 'Concluído',
+    ...(body.stage
+      ? {
+          workflowStage: body.stage,
+          completed: body.stage === 'Concluído',
+        }
+      : {}),
+    ...(editingDetails
+      ? {
+          type: body.type?.trim() || '',
+          dueAt: body.dueAt,
+          priority: body.priority,
+          owner: body.owner?.trim() || '',
+        }
+      : {}),
   };
+  if (
+    editingDetails &&
+    ((body.title?.trim().length ?? 0) < 2 ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(body.dueAt ?? '') ||
+      !['Alta', 'Média', 'Normal'].includes(body.priority ?? ''))
+  )
+    return NextResponse.json(
+      { error: 'Revise os dados da atividade.' },
+      { status: 400 },
+    );
   const { error } = await access.admin
     .from(table)
-    .update({
-      metadata,
-      completed: administrator ? body.stage === 'Concluído' : undefined,
-    })
+    .update(
+      administrator
+        ? {
+            metadata,
+            ...(body.stage ? { completed: body.stage === 'Concluído' } : {}),
+            ...(editingDetails
+              ? {
+                  activity_type:
+                    body.type?.trim() || 'Atividade administrativa',
+                  title: body.title?.trim(),
+                  due_at: body.dueAt,
+                  priority: body.priority,
+                  owner_name: body.owner?.trim() || 'Vanessa Rodrigues',
+                }
+              : {}),
+          }
+        : {
+            metadata,
+            ...(editingDetails ? { title: body.title?.trim() } : {}),
+          },
+    )
     .eq('id', rawId);
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });

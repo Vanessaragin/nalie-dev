@@ -11,6 +11,7 @@ import { createClient } from '../../../../lib/supabase/client';
 import {
   type ClientStatus,
   type CrmClient,
+  type NextAction,
   initialCrmData,
   latestByCompetence,
   money,
@@ -285,6 +286,9 @@ export default function CrmPage() {
     null,
   );
   const [editingClient, setEditingClient] = useState(false);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(
+    null,
+  );
   const [activityStages, setActivityStages] = useState<
     Record<string, WorkflowStage>
   >({
@@ -912,6 +916,28 @@ export default function CrmPage() {
       };
       setSavingClient(true);
       try {
+        if (editingActivityId) {
+          const response = await fetch('/api/admin/activities', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...action, id: editingActivityId }),
+          });
+          const result = (await response.json()) as { error?: string };
+          if (!response.ok) throw new Error(result.error);
+          setData((current) => ({
+            ...current,
+            nextActions: current.nextActions.map((item) =>
+              item.id === editingActivityId
+                ? { ...item, ...action, id: editingActivityId }
+                : item,
+            ),
+          }));
+          setEditingActivityId(null);
+          setSavingClient(false);
+          setModal(null);
+          setNotice('Atividade atualizada no banco com sucesso.');
+          return;
+        }
         if (targetClientId === administratorClientId) {
           action.id = await persistActivitySecurely(undefined, true, action);
         } else {
@@ -1206,6 +1232,7 @@ export default function CrmPage() {
             <button
               onClick={() => {
                 setFormError('');
+                setEditingActivityId(null);
                 setModal('action');
               }}
             >
@@ -1252,6 +1279,19 @@ export default function CrmPage() {
                             )
                           }
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingActivityId(action.id);
+                            setSelectedId(action.clientId);
+                            setFormError('');
+                            setModal('action');
+                          }}
+                          aria-label={`Editar ${action.title}`}
+                          title="Editar atividade"
+                        >
+                          ✎
+                        </button>
                         <button
                           type="button"
                           onClick={() => client && openClient(client)}
@@ -1573,6 +1613,13 @@ export default function CrmPage() {
                 clients={data.clients}
                 selectedId={selected?.id}
                 client={editingClient ? (selected ?? undefined) : undefined}
+                activity={
+                  editingActivityId
+                    ? data.nextActions.find(
+                        (action) => action.id === editingActivityId,
+                      )
+                    : undefined
+                }
               />
               {formError ? (
                 <p className={styles.formError} role="alert">
@@ -1625,6 +1672,7 @@ function ModalFields({
   clients,
   selectedId,
   client,
+  activity,
 }: {
   modal:
     | 'client'
@@ -1637,6 +1685,7 @@ function ModalFields({
   clients: CrmClient[];
   selectedId?: string;
   client?: CrmClient;
+  activity?: NextAction;
 }) {
   const [personType, setPersonType] = useState<'physical' | 'legal'>(
     client?.personType ?? 'physical',
@@ -2089,12 +2138,18 @@ function ModalFields({
         </label>
       </div>
     );
-  if (modal === 'action')
+  if (modal === 'action') {
+    const editingAction = activity;
     return (
       <div className={styles.formGrid}>
         <label>
           Cliente
-          <select name="clientId" defaultValue={selectedId ?? ''} required>
+          <select
+            name="clientId"
+            defaultValue={editingAction?.clientId ?? selectedId ?? ''}
+            required
+            disabled={Boolean(editingAction)}
+          >
             <option value="" disabled>
               Selecione o cliente
             </option>
@@ -2107,10 +2162,17 @@ function ModalFields({
               </option>
             ))}
           </select>
+          {editingAction ? (
+            <input
+              type="hidden"
+              name="clientId"
+              value={editingAction.clientId}
+            />
+          ) : null}
         </label>
         <label>
           Tipo
-          <select name="type">
+          <select name="type" defaultValue={editingAction?.type}>
             <option>Próximo contato</option>
             <option>Cobrança de documentos</option>
             <option>Próxima entrega</option>
@@ -2119,15 +2181,20 @@ function ModalFields({
         </label>
         <label>
           Título
-          <input name="title" required />
+          <input name="title" required defaultValue={editingAction?.title} />
         </label>
         <label>
           Data prevista
-          <input name="dueAt" type="date" required />
+          <input
+            name="dueAt"
+            type="date"
+            required
+            defaultValue={editingAction?.dueAt}
+          />
         </label>
         <label>
           Prioridade
-          <select name="priority">
+          <select name="priority" defaultValue={editingAction?.priority}>
             <option>Alta</option>
             <option>Média</option>
             <option>Normal</option>
@@ -2135,10 +2202,14 @@ function ModalFields({
         </label>
         <label>
           Responsável
-          <input name="owner" defaultValue="Vanessa Rodrigues" />
+          <input
+            name="owner"
+            defaultValue={editingAction?.owner || 'Vanessa Rodrigues'}
+          />
         </label>
       </div>
     );
+  }
   return (
     <div className={styles.formGrid}>
       <label>

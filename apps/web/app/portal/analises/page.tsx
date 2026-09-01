@@ -47,6 +47,22 @@ type PortalNotification = {
   href: string;
 };
 
+function embeddableUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (
+      url.hostname === 'docs.google.com' &&
+      url.pathname.includes('/presentation/d/e/') &&
+      url.pathname.endsWith('/pub')
+    ) {
+      url.pathname = url.pathname.replace(/\/pub$/, '/embed');
+    }
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
+
 type FinancialSummary = {
   movimentacoes: number;
   entradas: number;
@@ -737,7 +753,7 @@ export default function AnalysisWorkspacePage() {
                 {selectedCompany.dashboardUrl ? (
                   <iframe
                     className={styles.biFrame}
-                    src={selectedCompany.dashboardUrl}
+                    src={embeddableUrl(selectedCompany.dashboardUrl)}
                     title={`BI de ${selectedCompany.company}`}
                     allowFullScreen
                   />
@@ -763,7 +779,7 @@ export default function AnalysisWorkspacePage() {
                   {selectedCompany.presentationUrl ? (
                     <iframe
                       className={styles.biFrame}
-                      src={selectedCompany.presentationUrl}
+                      src={embeddableUrl(selectedCompany.presentationUrl)}
                       title={`Apresentação de ${selectedCompany.company}`}
                       allowFullScreen
                     />

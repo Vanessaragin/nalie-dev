@@ -10,6 +10,7 @@ import CompanySwitcher from '../../../components/company-switcher';
 import { createClient } from '../../../../lib/supabase/client';
 
 const initialEvents: Array<{
+  date: string;
   day: string;
   time: string;
   title: string;
@@ -80,6 +81,7 @@ export default function ClientCalendarPage() {
               ? row.suggested_agenda.map(String)
               : [];
             return {
+              date: startsAt.toISOString().slice(0, 10),
               day: String(startsAt.getDate()),
               time: startsAt.toLocaleTimeString('pt-BR', {
                 hour: '2-digit',
@@ -88,10 +90,16 @@ export default function ClientCalendarPage() {
               title: String(row.title),
               type: String(row.theme || 'Empresa'),
               reminder:
-                agenda.find((item) => item.startsWith('Lembrete: '))?.slice(10) ??
-                'Sem lembrete',
-              details: agenda.find((item) => item.startsWith('Detalhes: '))?.slice(10) ?? '',
-              location: agenda.find((item) => item.startsWith('Local: '))?.slice(7) ?? '',
+                agenda
+                  .find((item) => item.startsWith('Lembrete: '))
+                  ?.slice(10) ?? 'Sem lembrete',
+              details:
+                agenda
+                  .find((item) => item.startsWith('Detalhes: '))
+                  ?.slice(10) ?? '',
+              location:
+                agenda.find((item) => item.startsWith('Local: '))?.slice(7) ??
+                '',
             };
           }),
         );
@@ -118,6 +126,7 @@ export default function ClientCalendarPage() {
     setEvents((current) => [
       ...current,
       {
+        date,
         day: date.split('-')[2],
         time,
         title,
@@ -127,6 +136,7 @@ export default function ClientCalendarPage() {
         location,
       },
     ]);
+    setPeriod(date.slice(0, 7));
     setShowForm(false);
     setNotice(`${title} foi adicionado ao calendário.`);
 
@@ -168,6 +178,9 @@ export default function ClientCalendarPage() {
     })();
   }
   const newestEvent = events.at(-1);
+  const visibleEvents = events.filter((item) => item.date.startsWith(period));
+  const [periodYear, periodMonth] = period.split('-').map(Number);
+  const daysInMonth = new Date(periodYear, periodMonth, 0).getDate();
   return (
     <main className={shell.portal}>
       <aside className={shell.sidebar}>
@@ -282,7 +295,9 @@ export default function ClientCalendarPage() {
         <section className={styles.grid}>
           <article className={styles.calendar}>
             <div className={styles.calendarTitle}>
-              <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">‹</button>
+              <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">
+                ‹
+              </button>
               <b>
                 {new Intl.DateTimeFormat('pt-BR', {
                   month: 'long',
@@ -290,7 +305,9 @@ export default function ClientCalendarPage() {
                   timeZone: 'UTC',
                 }).format(new Date(`${period}-01T12:00:00Z`))}
               </b>
-              <button onClick={() => changeMonth(1)} aria-label="Próximo mês">›</button>
+              <button onClick={() => changeMonth(1)} aria-label="Próximo mês">
+                ›
+              </button>
             </div>
             <div className={styles.week}>
               {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
@@ -298,29 +315,31 @@ export default function ClientCalendarPage() {
               ))}
             </div>
             <div className={styles.days}>
-              {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
-                <div key={day}>
-                  <span>{day}</span>
-                  {events
-                    .filter((item) => Number(item.day) === day)
-                    .map((item) => (
-                      <small
-                        className={
-                          styles[
-                            item.type === 'Pré-lançamento'
-                              ? 'billing'
-                              : item.type === 'Com Vanessa'
-                                ? 'vanessa'
-                                : 'company'
-                          ]
-                        }
-                        key={item.title}
-                      >
-                        {item.title}
-                      </small>
-                    ))}
-                </div>
-              ))}
+              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(
+                (day) => (
+                  <div key={day}>
+                    <span>{day}</span>
+                    {visibleEvents
+                      .filter((item) => Number(item.day) === day)
+                      .map((item) => (
+                        <small
+                          className={
+                            styles[
+                              item.type === 'Pré-lançamento'
+                                ? 'billing'
+                                : item.type === 'Com Vanessa'
+                                  ? 'vanessa'
+                                  : 'company'
+                            ]
+                          }
+                          key={item.title}
+                        >
+                          {item.title}
+                        </small>
+                      ))}
+                  </div>
+                ),
+              )}
             </div>
           </article>
           <aside className={styles.upcoming}>
@@ -328,10 +347,16 @@ export default function ClientCalendarPage() {
               <b>Próximos compromissos</b>
               <small>Todos os eventos desta empresa</small>
             </div>
-            {events.map((item) => (
+            {visibleEvents.map((item) => (
               <article key={`${item.day}-${item.title}`}>
                 <time>
-                  {item.day} Jun
+                  {new Date(`${item.date}T12:00:00`).toLocaleDateString(
+                    'pt-BR',
+                    {
+                      day: '2-digit',
+                      month: 'short',
+                    },
+                  )}
                   <br />
                   {item.time}
                 </time>
