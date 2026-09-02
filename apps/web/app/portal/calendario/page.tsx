@@ -16,6 +16,7 @@ function currentPeriod() {
 }
 type Appointment = {
   id: string;
+  companyId: string;
   date: string;
   day: number;
   time: string;
@@ -27,6 +28,10 @@ type Appointment = {
   email: string;
   details?: string;
   location?: string;
+  calendar: 'general' | 'personal';
+  duration: number;
+  recurrence: string;
+  reminder: string;
 };
 
 type ClientChoice = {
@@ -77,6 +82,8 @@ export default function CalendarPage() {
   const [appointmentPhone, setAppointmentPhone] = useState('');
   const [appointmentEmail, setAppointmentEmail] = useState('');
   const [savingAppointment, setSavingAppointment] = useState(false);
+  const [editingAppointment, setEditingAppointment] =
+    useState<Appointment | null>(null);
   const calendarAppointments =
     calendarView === 'general' ? generalItems : personalItems;
   const clientOptions = [
@@ -121,7 +128,7 @@ export default function CalendarPage() {
           supabase
             .from('calendar_events')
             .select(
-              'id,company_id,title,starts_at,suggested_agenda,priority,scope',
+              'id,company_id,title,starts_at,ends_at,suggested_agenda,priority,scope',
             )
             .order('starts_at', { ascending: true }),
         ]);
@@ -169,6 +176,7 @@ export default function CalendarPage() {
               scope: String(row.scope),
               appointment: {
                 id: String(row.id),
+                companyId: String(row.company_id),
                 date,
                 day: startsAt.getDate(),
                 time: startsAt.toLocaleTimeString('pt-BR', {
@@ -188,8 +196,33 @@ export default function CalendarPage() {
                   ? `https://wa.me/${choice.whatsapp.replace(/\D/g, '')}`
                   : '',
                 email: choice.email ? `mailto:${choice.email}` : '',
-                details: agenda.join(' · '),
-                location: '',
+                details:
+                  agenda
+                    .find((item) => item.startsWith('Detalhes: '))
+                    ?.slice(10) ?? '',
+                location:
+                  agenda.find((item) => item.startsWith('Local: '))?.slice(7) ??
+                  '',
+                calendar:
+                  String(row.scope) === 'PERSONAL'
+                    ? ('personal' as const)
+                    : ('general' as const),
+                duration: Math.max(
+                  30,
+                  Math.round(
+                    (new Date(String(row.ends_at)).getTime() -
+                      startsAt.getTime()) /
+                      60_000,
+                  ) || 60,
+                ),
+                recurrence:
+                  agenda
+                    .find((item) => item.startsWith('Recorrência: '))
+                    ?.slice(12) ?? 'Não repetir',
+                reminder:
+                  agenda
+                    .find((item) => item.startsWith('Lembrete: '))
+                    ?.slice(10) ?? '1 dia antes',
               },
             },
           ];
@@ -254,39 +287,39 @@ export default function CalendarPage() {
         await supabase.auth.getUser();
       if (authError || !authData.user)
         throw authError ?? new Error('Sessão inválida');
-      const { data: saved, error } = await supabase
-        .from('calendar_events')
-        .insert({
-          company_id: clientId,
-          created_by: authData.user.id,
-          assigned_profile_id:
-            calendar === 'personal' ? authData.user.id : null,
-          title,
-          theme: 'Compromisso',
-          starts_at: startsAt.toISOString(),
-          ends_at: new Date(
-            startsAt.getTime() + duration * 60_000,
-          ).toISOString(),
-          suggested_agenda: [
-            `Detalhes: ${details}`,
-            `Local: ${location}`,
-            `Lembrete: ${reminder}`,
-            `Recorrência: ${recurrence}`,
-            `WhatsApp: ${phone}`,
-            `E-mail: ${emailAddress}`,
-          ],
-          whatsapp_reminder_enabled: false,
-          priority:
-            priority === 'Alta'
-              ? 'HIGH'
-              : priority === 'Média'
-                ? 'MEDIUM'
-                : 'NORMAL',
-          booked_with_owner: true,
-          scope: calendar === 'personal' ? 'PERSONAL' : 'COMPANY',
-        })
-        .select('id')
-        .single();
+      const values = {
+        company_id: clientId,
+        created_by: authData.user.id,
+        assigned_profile_id: calendar === 'personal' ? authData.user.id : null,
+        title,
+        theme: 'Compromisso',
+        starts_at: startsAt.toISOString(),
+        ends_at: new Date(startsAt.getTime() + duration * 60_000).toISOString(),
+        suggested_agenda: [
+          `Detalhes: ${details}`,
+          `Local: ${location}`,
+          `Lembrete: ${reminder}`,
+          `Recorrência: ${recurrence}`,
+          `WhatsApp: ${phone}`,
+          `E-mail: ${emailAddress}`,
+        ],
+        whatsapp_reminder_enabled: false,
+        priority:
+          priority === 'Alta'
+            ? 'HIGH'
+            : priority === 'Média'
+              ? 'MEDIUM'
+              : 'NORMAL',
+        booked_with_owner: true,
+        scope: calendar === 'personal' ? 'PERSONAL' : 'COMPANY',
+      };
+      const request = editingAppointment
+        ? supabase
+            .from('calendar_events')
+            .update(values)
+            .eq('id', editingAppointment.id)
+        : supabase.from('calendar_events').insert(values);
+      const { data: saved, error } = await request.select('id').single();
       if (error) throw error;
       savedId = String(saved.id);
     } catch (error) {
@@ -296,8 +329,9 @@ export default function CalendarPage() {
       setSavingAppointment(false);
       return;
     }
-    const item = {
+    const item: Appointment = {
       id: savedId,
+      companyId: clientId,
       date,
       day,
       time,
@@ -313,7 +347,17 @@ export default function CalendarPage() {
         : '',
       details,
       location,
+      calendar: calendar === 'personal' ? 'personal' : 'general',
+      duration,
+      recurrence,
+      reminder,
     };
+    setGeneralItems((current) =>
+      current.filter((currentItem) => currentItem.id !== item.id),
+    );
+    setPersonalItems((current) =>
+      current.filter((currentItem) => currentItem.id !== item.id),
+    );
     if (calendar === 'personal') {
       setPersonalItems((current) => [...current, item]);
       setCalendarView('personal');
@@ -324,11 +368,24 @@ export default function CalendarPage() {
     setShowAppointmentForm(false);
     setSelectedDay(day);
     setPeriod(date.slice(0, 7));
-    setAppointmentNotice(`${title} foi salvo no banco e no calendário.`);
+    setAppointmentNotice(
+      `${title} foi ${editingAppointment ? 'atualizado' : 'salvo'} no banco e no calendário.`,
+    );
+    setEditingAppointment(null);
     setAppointmentClientId('');
     setAppointmentPhone('');
     setAppointmentEmail('');
     setSavingAppointment(false);
+  }
+  function openAppointmentForm(item?: Appointment) {
+    setEditingAppointment(item ?? null);
+    setAppointmentClientId(item?.companyId ?? '');
+    const choice = clientChoices.find(
+      (client) => client.id === item?.companyId,
+    );
+    setAppointmentPhone(choice?.whatsapp ?? '');
+    setAppointmentEmail(choice?.email ?? '');
+    setShowAppointmentForm(true);
   }
   function changeMonth(offset: number) {
     const [year, month] = period.split('-').map(Number);
@@ -366,7 +423,7 @@ export default function CalendarPage() {
           <div className={shell.filters}>
             <button
               className={shell.import}
-              onClick={() => setShowAppointmentForm(true)}
+              onClick={() => openAppointmentForm()}
             >
               ＋ {en ? 'New appointment' : 'Novo compromisso'}
             </button>
@@ -376,17 +433,28 @@ export default function CalendarPage() {
           <p className={styles.appointmentNotice}>✓ {appointmentNotice}</p>
         )}
         {showAppointmentForm && (
-          <form className={styles.appointmentForm} onSubmit={addAppointment}>
+          <form
+            key={editingAppointment?.id ?? 'new'}
+            className={styles.appointmentForm}
+            onSubmit={addAppointment}
+          >
             <header>
               <div>
-                <b>Novo compromisso</b>
+                <b>
+                  {editingAppointment
+                    ? 'Editar compromisso'
+                    : 'Novo compromisso'}
+                </b>
                 <small>
                   Cadastre o evento e escolha em qual agenda ele aparecerá.
                 </small>
               </div>
               <button
                 type="button"
-                onClick={() => setShowAppointmentForm(false)}
+                onClick={() => {
+                  setShowAppointmentForm(false);
+                  setEditingAppointment(null);
+                }}
               >
                 ×
               </button>
@@ -398,6 +466,7 @@ export default function CalendarPage() {
                   name="title"
                   required
                   placeholder="Ex.: Revisão financeira"
+                  defaultValue={editingAppointment?.title ?? ''}
                 />
               </label>
               <label>
@@ -426,7 +495,10 @@ export default function CalendarPage() {
               </label>
               <label>
                 Agenda
-                <select name="calendar" defaultValue={calendarView}>
+                <select
+                  name="calendar"
+                  defaultValue={editingAppointment?.calendar ?? calendarView}
+                >
                   <option value="general">Agenda geral</option>
                   <option value="personal">Agenda pessoal</option>
                 </select>
@@ -436,17 +508,28 @@ export default function CalendarPage() {
                 <input
                   name="date"
                   type="date"
-                  defaultValue={`${period}-${String(selectedDay ?? 14).padStart(2, '0')}`}
+                  defaultValue={
+                    editingAppointment?.date ??
+                    `${period}-${String(selectedDay ?? 14).padStart(2, '0')}`
+                  }
                   required
                 />
               </label>
               <label>
                 Horário
-                <input name="time" type="time" required />
+                <input
+                  name="time"
+                  type="time"
+                  required
+                  defaultValue={editingAppointment?.time ?? ''}
+                />
               </label>
               <label>
                 Duração
-                <select name="duration" defaultValue="60">
+                <select
+                  name="duration"
+                  defaultValue={String(editingAppointment?.duration ?? 60)}
+                >
                   <option value="30">30 minutos</option>
                   <option value="60">1 hora</option>
                   <option value="90">1 hora e 30 minutos</option>
@@ -455,7 +538,10 @@ export default function CalendarPage() {
               </label>
               <label>
                 Recorrência
-                <select name="recurrence" defaultValue="Não repetir">
+                <select
+                  name="recurrence"
+                  defaultValue={editingAppointment?.recurrence ?? 'Não repetir'}
+                >
                   <option>Não repetir</option>
                   <option>Semanal</option>
                   <option>Quinzenal</option>
@@ -464,7 +550,10 @@ export default function CalendarPage() {
               </label>
               <label>
                 Prioridade
-                <select name="priority">
+                <select
+                  name="priority"
+                  defaultValue={editingAppointment?.priority ?? 'Alta'}
+                >
                   <option>Alta</option>
                   <option>Média</option>
                   <option>Normal</option>
@@ -495,11 +584,15 @@ export default function CalendarPage() {
                 <input
                   name="location"
                   placeholder="Endereço, Google Meet ou outro link"
+                  defaultValue={editingAppointment?.location ?? ''}
                 />
               </label>
               <label>
                 Lembrete
-                <select name="reminder" defaultValue="1 dia antes">
+                <select
+                  name="reminder"
+                  defaultValue={editingAppointment?.reminder ?? '1 dia antes'}
+                >
                   <option>15 minutos antes</option>
                   <option>1 hora antes</option>
                   <option>1 dia antes</option>
@@ -512,18 +605,26 @@ export default function CalendarPage() {
                   name="details"
                   rows={4}
                   placeholder="Objetivo, assuntos que serão tratados, documentos necessários e observações"
+                  defaultValue={editingAppointment?.details ?? ''}
                 />
               </label>
             </div>
             <footer>
               <button
                 type="button"
-                onClick={() => setShowAppointmentForm(false)}
+                onClick={() => {
+                  setShowAppointmentForm(false);
+                  setEditingAppointment(null);
+                }}
               >
                 Cancelar
               </button>
               <button disabled={savingAppointment}>
-                {savingAppointment ? 'Salvando...' : 'Salvar compromisso'}
+                {savingAppointment
+                  ? 'Salvando...'
+                  : editingAppointment
+                    ? 'Salvar alterações'
+                    : 'Salvar compromisso'}
               </button>
             </footer>
           </form>
@@ -724,6 +825,13 @@ export default function CalendarPage() {
                 </p>
                 <em className={styles[item.tone]}>{item.priority}</em>
                 <div className={styles.contactActions}>
+                  <button
+                    type="button"
+                    className={styles.editAppointment}
+                    onClick={() => openAppointmentForm(item)}
+                  >
+                    Editar
+                  </button>
                   <a
                     className={styles.whatsapp}
                     href={item.whatsapp}

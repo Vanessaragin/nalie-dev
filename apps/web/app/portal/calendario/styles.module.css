@@ -92,6 +92,15 @@
   background: #f0789c;
   color: #fffafb;
 }
+.editAppointment {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #e6a5b8;
+  border-radius: 8px;
+  background: #fffafb;
+  color: #623044;
+  font-weight: 800;
+}
 .clientPreview {
   min-height: 44px;
   padding: 0 13px;
