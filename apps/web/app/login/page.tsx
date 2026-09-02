@@ -95,9 +95,6 @@ export default function LoginPage() {
           O acesso é criado por convite da administração. Não há cadastro
           público.
         </p>
-        <Link className={styles.firstAccess} href="/primeiro-acesso">
-          Recebeu uma senha provisória? Crie sua nova senha →
-        </Link>
       </section>
       <aside className={styles.visual}>
         <div className={styles.portrait} aria-hidden="true" />
