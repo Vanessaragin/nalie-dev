@@ -328,11 +328,13 @@ export async function POST(request: Request) {
     const contracted = body.clientStatus !== 'Não contratado';
     if (contracted && contractValue >= 0) {
       const frequency =
-        body.periodicity === 'Semanal'
-          ? 'WEEKLY'
-          : body.periodicity === 'Quinzenal'
-            ? 'BIWEEKLY'
-            : 'MONTHLY';
+        body.periodicity === 'Cobrança única'
+          ? 'ONE_TIME'
+          : body.periodicity === 'Semanal'
+            ? 'WEEKLY'
+            : body.periodicity === 'Quinzenal'
+              ? 'BIWEEKLY'
+              : 'MONTHLY';
       const startsOn = /^\d{4}-\d{2}-\d{2}$/.test(body.firstBillingDate ?? '')
         ? body.firstBillingDate!
         : (() => {

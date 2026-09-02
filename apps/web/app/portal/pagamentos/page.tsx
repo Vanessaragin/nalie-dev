@@ -502,7 +502,7 @@ export default function PaymentsPage() {
             </div>
             <div>
               <dt>Tipo da cobrança</dt>
-              <dd>Semanal, quinzenal ou mensal</dd>
+              <dd>Única, semanal, quinzenal ou mensal</dd>
             </div>
           </dl>
         </section>

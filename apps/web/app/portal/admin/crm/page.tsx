@@ -1913,6 +1913,7 @@ function ModalFields({
                 <option>Semanal</option>
                 <option>Quinzenal</option>
                 <option>Mensal</option>
+                <option>Cobrança única</option>
               </select>
             </label>
             <label>

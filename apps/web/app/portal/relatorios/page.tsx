@@ -157,11 +157,40 @@ export default function ReportsPage() {
   const [companyImportIdentifier, setCompanyImportIdentifier] =
     useState('Não selecionado');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [isAdministrator, setIsAdministrator] = useState(false);
+  const [companyOptions, setCompanyOptions] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
   const visibleImportedFiles = importedFiles.filter(
     (file) =>
       importedClientFilter === 'Todos' || file.person === importedClientFilter,
   );
   const latestStoredDate = importedFiles[0]?.date ?? 'Aguardando arquivos';
+
+  useEffect(() => {
+    async function loadAdministrativeCompanies() {
+      try {
+        const supabase = createClient();
+        const { data: administrator } = await supabase.rpc('is_super_admin');
+        if (!administrator) return;
+        setIsAdministrator(true);
+        const { data } = await supabase
+          .from('companies')
+          .select('id,display_name')
+          .eq('status', 'ACTIVE')
+          .order('display_name');
+        setCompanyOptions(
+          (data ?? []).map((company) => ({
+            id: String(company.id),
+            name: String(company.display_name),
+          })),
+        );
+      } catch {
+        setCompanyOptions([]);
+      }
+    }
+    void loadAdministrativeCompanies();
+  }, []);
 
   useEffect(() => {
     async function loadStoredFiles() {
@@ -250,6 +279,52 @@ export default function ReportsPage() {
 
   async function storeImportedFile(file: File) {
     try {
+      if (isAdministrator) {
+        if (!selectedCompanyId)
+          throw new Error('Selecione a empresa que receberá o arquivo.');
+        const body = new FormData();
+        body.set('companyId', selectedCompanyId);
+        body.set('file', file);
+        const response = await fetch('/api/admin/company-files', {
+          method: 'POST',
+          body,
+        });
+        const result = (await response.json()) as {
+          error?: string;
+          id?: string;
+          storagePath?: string;
+          checksum?: string;
+          createdAt?: string;
+          companyName?: string;
+          importIdentifier?: string;
+        };
+        if (!response.ok || !result.id) throw new Error(result.error);
+        const { data: authData } = await createClient().auth.getUser();
+        setImportedFiles((current) => [
+          {
+            id: result.id!,
+            name: file.name,
+            companyId: selectedCompanyId,
+            userId: authData.user?.id,
+            company: result.companyName ?? 'Empresa cliente',
+            person:
+              authData.user?.user_metadata?.full_name ??
+              authData.user?.email ??
+              'Administração',
+            date: new Date(result.createdAt ?? Date.now()).toLocaleDateString(
+              'pt-BR',
+            ),
+            status: 'Armazenado · íntegro',
+            storagePath: result.storagePath,
+            byteSize: file.size,
+            checksumSha256: result.checksum,
+            importIdentifier: result.importIdentifier ?? selectedCompanyId,
+          },
+          ...current,
+        ]);
+        setNotice(`${file.name} armazenado com segurança.`);
+        return;
+      }
       const supabase = createClient();
       const { data: companyId, error: companyError } =
         await supabase.rpc('current_company_id');
@@ -317,9 +392,9 @@ export default function ReportsPage() {
         ...current,
       ]);
       setNotice(`${file.name} armazenado com segurança, sem tratamento.`);
-    } catch {
+    } catch (error) {
       setNotice(
-        `Não foi possível armazenar ${file.name}. Selecione o arquivo novamente; nenhum registro incompleto foi mantido.`,
+        `Não foi possível armazenar ${file.name}: ${error instanceof Error ? error.message : 'erro desconhecido'}. Nenhum registro incompleto foi mantido.`,
       );
     }
   }
@@ -555,7 +630,24 @@ export default function ReportsPage() {
               somente armazenados, sem leitura, tratamento ou conversão.
             </p>
           </div>
+          {isAdministrator && (
+            <label>
+              Empresa de destino
+              <select
+                value={selectedCompanyId}
+                onChange={(event) => setSelectedCompanyId(event.target.value)}
+              >
+                <option value="">Selecione a empresa</option>
+                {companyOptions.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <FileImportButton
+            disabled={isAdministrator && !selectedCompanyId}
             className={styles.primaryLink}
             label="＋ Importar arquivo"
             onFile={(file) => void storeImportedFile(file)}

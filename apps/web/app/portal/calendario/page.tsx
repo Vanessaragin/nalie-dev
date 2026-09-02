@@ -16,6 +16,7 @@ function currentPeriod() {
 }
 type Appointment = {
   id: string;
+  sourceId: string;
   companyId: string;
   date: string;
   day: number;
@@ -43,6 +44,44 @@ type ClientChoice = {
 
 const appointments: Appointment[] = [];
 const personalAppointments: Appointment[] = [];
+
+function recurringAppointments(items: Appointment[], period: string) {
+  const [year, month] = period.split('-').map(Number);
+  const rangeStart = new Date(year, month - 1, 1);
+  const rangeEnd = new Date(year, month, 0, 23, 59, 59);
+  return items.flatMap((item) => {
+    if (item.recurrence === 'Não repetir')
+      return item.date.startsWith(period) ? [item] : [];
+    const cursor = new Date(`${item.date}T12:00:00`);
+    const originalDay = cursor.getDate();
+    const occurrences: Appointment[] = [];
+    for (let count = 0; count < 400 && cursor <= rangeEnd; count += 1) {
+      if (cursor >= rangeStart) {
+        const date = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+        occurrences.push({
+          ...item,
+          id: `${item.sourceId}:${date}`,
+          date,
+          day: cursor.getDate(),
+        });
+      }
+      if (item.recurrence === 'Semanal') cursor.setDate(cursor.getDate() + 7);
+      else if (item.recurrence === 'Quinzenal')
+        cursor.setDate(cursor.getDate() + 14);
+      else {
+        cursor.setDate(1);
+        cursor.setMonth(cursor.getMonth() + 1);
+        cursor.setDate(
+          Math.min(
+            originalDay,
+            new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate(),
+          ),
+        );
+      }
+    }
+    return occurrences;
+  });
+}
 
 function googleCalendarUrl(
   title: string,
@@ -84,12 +123,16 @@ export default function CalendarPage() {
   const [savingAppointment, setSavingAppointment] = useState(false);
   const [editingAppointment, setEditingAppointment] =
     useState<Appointment | null>(null);
-  const calendarAppointments =
+  const storedCalendarAppointments =
     calendarView === 'general' ? generalItems : personalItems;
+  const calendarAppointments = recurringAppointments(
+    storedCalendarAppointments,
+    period,
+  );
   const clientOptions = [
     ...new Set([
       ...clientChoices.map((choice) => choice.label),
-      ...calendarAppointments.map((item) => item.client),
+      ...storedCalendarAppointments.map((item) => item.client),
     ]),
   ];
   const visibleAppointments = calendarAppointments.filter(
@@ -176,6 +219,7 @@ export default function CalendarPage() {
               scope: String(row.scope),
               appointment: {
                 id: String(row.id),
+                sourceId: String(row.id),
                 companyId: String(row.company_id),
                 date,
                 day: startsAt.getDate(),
@@ -317,7 +361,7 @@ export default function CalendarPage() {
         ? supabase
             .from('calendar_events')
             .update(values)
-            .eq('id', editingAppointment.id)
+            .eq('id', editingAppointment.sourceId)
         : supabase.from('calendar_events').insert(values);
       const { data: saved, error } = await request.select('id').single();
       if (error) throw error;
@@ -331,6 +375,7 @@ export default function CalendarPage() {
     }
     const item: Appointment = {
       id: savedId,
+      sourceId: savedId,
       companyId: clientId,
       date,
       day,
@@ -353,10 +398,10 @@ export default function CalendarPage() {
       reminder,
     };
     setGeneralItems((current) =>
-      current.filter((currentItem) => currentItem.id !== item.id),
+      current.filter((currentItem) => currentItem.sourceId !== item.sourceId),
     );
     setPersonalItems((current) =>
-      current.filter((currentItem) => currentItem.id !== item.id),
+      current.filter((currentItem) => currentItem.sourceId !== item.sourceId),
     );
     if (calendar === 'personal') {
       setPersonalItems((current) => [...current, item]);
@@ -814,7 +859,7 @@ export default function CalendarPage() {
               </button>
             )}
             {visibleAppointments.map((item) => (
-              <article key={`${item.title}-${item.time}`}>
+              <article key={item.id}>
                 <strong>{item.time}</strong>
                 <span className={styles[item.tone]} />
                 <p>
@@ -822,6 +867,9 @@ export default function CalendarPage() {
                   <small>{item.client}</small>
                   {item.location && <small>Local: {item.location}</small>}
                   {item.details && <small>Pauta: {item.details}</small>}
+                  <small>Duração: {item.duration} minutos</small>
+                  <small>Recorrência: {item.recurrence}</small>
+                  <small>Lembrete: {item.reminder}</small>
                 </p>
                 <em className={styles[item.tone]}>{item.priority}</em>
                 <div className={styles.contactActions}>
