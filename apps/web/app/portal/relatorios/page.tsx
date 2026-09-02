@@ -190,23 +190,48 @@ export default function ReportsPage() {
           await supabase.rpc('current_company_id');
         if (companyError || !companyId) throw companyError;
 
-        const [documentsResult, companyResult, userResult] = await Promise.all([
-          supabase
+        const [initialDocumentsResult, companyResult, userResult] =
+          await Promise.all([
+            supabase
+              .from('company_documents')
+              .select(
+                'id, file_name, storage_path, uploaded_by, created_at, byte_size, checksum_sha256, storage_status',
+              )
+              .eq('company_id', companyId)
+              .eq('category', 'stored_upload')
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('companies')
+              .select('display_name,import_identifier')
+              .eq('id', companyId)
+              .single(),
+            supabase.auth.getUser(),
+          ]);
+        let documentsData = initialDocumentsResult.data;
+        let documentsError = initialDocumentsResult.error;
+        if (
+          documentsError &&
+          /byte_size|checksum_sha256|storage_status|schema cache/i.test(
+            documentsError.message,
+          )
+        ) {
+          const legacyDocumentsResult = await supabase
             .from('company_documents')
-            .select(
-              'id, file_name, storage_path, uploaded_by, created_at, byte_size, checksum_sha256, storage_status',
-            )
+            .select('id, file_name, storage_path, uploaded_by, created_at')
             .eq('company_id', companyId)
             .eq('category', 'stored_upload')
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('companies')
-            .select('display_name,import_identifier')
-            .eq('id', companyId)
-            .single(),
-          supabase.auth.getUser(),
-        ]);
-        if (documentsResult.error) throw documentsResult.error;
+            .order('created_at', { ascending: false });
+          documentsData = (legacyDocumentsResult.data ?? []).map(
+            (document) => ({
+              ...document,
+              byte_size: null,
+              checksum_sha256: null,
+              storage_status: 'STORED',
+            }),
+          );
+          documentsError = legacyDocumentsResult.error;
+        }
+        if (documentsError) throw documentsError;
 
         const companyName =
           companyResult.data?.display_name ?? 'Empresa do cliente';
@@ -218,7 +243,7 @@ export default function ReportsPage() {
         setCompanyImportIdentifier(importIdentifier);
         const uploaderIds = Array.from(
           new Set(
-            (documentsResult.data ?? [])
+            (documentsData ?? [])
               .map((document) => document.uploaded_by)
               .filter((id): id is string => Boolean(id)),
           ),
@@ -236,7 +261,7 @@ export default function ReportsPage() {
           ]),
         );
         setImportedFiles(
-          (documentsResult.data ?? []).map((document) => ({
+          (documentsData ?? []).map((document) => ({
             id: document.id,
             name: document.file_name,
             companyId,

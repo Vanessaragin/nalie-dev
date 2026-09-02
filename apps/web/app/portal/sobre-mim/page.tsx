@@ -35,6 +35,7 @@ export default function AboutPage() {
   const [photoUrl, setPhotoUrl] = useState(NALIE_PROFILE_PHOTO);
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showContactOptions, setShowContactOptions] = useState(false);
   useEffect(() => {
     try {
       void createClient()
@@ -84,6 +85,22 @@ export default function AboutPage() {
     setSaved(true);
   }
   const services = data.services.split('\n').filter(Boolean);
+  const emailUrl = `mailto:${data.email}?subject=${encodeURIComponent('Contato pelo portal Nalie')}`;
+  const phoneDigits = data.whatsapp.replace(/\D/g, '');
+  const whatsappNumber =
+    phoneDigits.length >= 10 && phoneDigits.length <= 11
+      ? `55${phoneDigits}`
+      : phoneDigits;
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Olá, gostaria de conversar sobre o meu negócio.')}`;
+  const instagramHandle = data.linkedin
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+    .replace(/^@/, '')
+    .replace(/\/$/, '');
+  const instagramUrl = `https://www.instagram.com/${instagramHandle}`;
+  const hasWhatsapp = whatsappNumber.length >= 12;
+  const hasInstagram = Boolean(
+    instagramHandle && !/adicionar perfil/i.test(data.linkedin),
+  );
   return (
     <main className={shell.portal}>
       <aside className={shell.sidebar}>
@@ -285,7 +302,28 @@ export default function AboutPage() {
                 </p>
               </li>
             </ul>
-            <button>Enviar uma mensagem →</button>
+            <button
+              type="button"
+              onClick={() => setShowContactOptions((current) => !current)}
+              aria-expanded={showContactOptions}
+            >
+              Enviar uma mensagem →
+            </button>
+            {showContactOptions && (
+              <div className={styles.contactOptions}>
+                <a href={emailUrl}>✉ Enviar por e-mail</a>
+                {hasWhatsapp && (
+                  <a href={whatsappUrl} target="_blank" rel="noreferrer">
+                    ◉ Enviar pelo WhatsApp
+                  </a>
+                )}
+                {hasInstagram && (
+                  <a href={instagramUrl} target="_blank" rel="noreferrer">
+                    ◎ Abrir conversa no Instagram
+                  </a>
+                )}
+              </div>
+            )}
           </aside>
         </section>
         <section className={styles.services}>

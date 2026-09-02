@@ -271,6 +271,26 @@
   background: #ed376f;
   color: #fffafb;
   font-size: 14px;
+  cursor: pointer;
+}
+.contactOptions {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.contactOptions a {
+  display: block;
+  padding: 11px 13px;
+  border: 1px solid #e6a5b8;
+  border-radius: 9px;
+  background: #fffafb;
+  color: #623044;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.contactOptions a:hover {
+  background: #ffe7ee;
 }
 .services,
 .policies {

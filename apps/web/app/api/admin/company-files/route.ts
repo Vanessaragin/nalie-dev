@@ -106,9 +106,28 @@ export async function POST(request: Request) {
   if (uploadError)
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
 
-  const { data: document, error: documentError } = await admin
+  const documentRecord = {
+    id,
+    company_id: companyId,
+    file_name: file.name,
+    storage_path: storagePath,
+    category: 'stored_upload',
+    mime_type: mimeType,
+    access_scope: 'company',
+    uploaded_by: String(claims.claims.sub),
+    byte_size: file.size,
+    checksum_sha256: checksum,
+  };
+  let { data: document, error: documentError } = await admin
     .from('company_documents')
-    .insert({
+    .insert(documentRecord)
+    .select('created_at')
+    .single();
+  if (
+    documentError &&
+    /byte_size|checksum_sha256|schema cache/i.test(documentError.message)
+  ) {
+    const legacyRecord = {
       id,
       company_id: companyId,
       file_name: file.name,
@@ -117,11 +136,15 @@ export async function POST(request: Request) {
       mime_type: mimeType,
       access_scope: 'company',
       uploaded_by: String(claims.claims.sub),
-      byte_size: file.size,
-      checksum_sha256: checksum,
-    })
-    .select('created_at')
-    .single();
+    };
+    const legacyInsert = await admin
+      .from('company_documents')
+      .insert(legacyRecord)
+      .select('created_at')
+      .single();
+    document = legacyInsert.data;
+    documentError = legacyInsert.error;
+  }
   if (documentError) {
     await admin.storage.from('company-files').remove([storagePath]);
     return NextResponse.json({ error: documentError.message }, { status: 500 });
@@ -131,7 +154,7 @@ export async function POST(request: Request) {
     companyId,
     storagePath,
     checksum,
-    createdAt: document.created_at,
+    createdAt: document?.created_at ?? new Date().toISOString(),
     companyName: company.display_name,
     importIdentifier: company.import_identifier ?? companyId,
   });
