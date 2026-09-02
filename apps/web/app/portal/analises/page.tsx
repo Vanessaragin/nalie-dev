@@ -191,11 +191,11 @@ export default function AnalysisWorkspacePage() {
           if (canManageAnalysis) {
             const companiesWithLogin = await Promise.all(
               companies.map(async (company) => {
-                const { data: activeUsers } = await supabase.rpc(
-                  'active_company_user_count',
+                const { data: hasCompletedLogin } = await supabase.rpc(
+                  'company_has_completed_login',
                   { target_company_id: company.id },
                 );
-                return Number(activeUsers ?? 0) > 0 ? company : null;
+                return hasCompletedLogin ? company : null;
               }),
             );
             companies = companiesWithLogin.filter(
