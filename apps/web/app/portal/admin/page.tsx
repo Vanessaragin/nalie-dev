@@ -258,6 +258,40 @@ export default function AdminPage() {
     }
   }
 
+  async function changeUserStatus(index: number) {
+    const previousStatus = statuses[index];
+    const requestedStatus = !previousStatus;
+    const membershipId = users[index]?.membershipId;
+    if (!membershipId) return;
+
+    setStatuses((current) =>
+      current.map((status, item) =>
+        item === index ? requestedStatus : status,
+      ),
+    );
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.rpc('set_company_user_active', {
+        target_membership_id: membershipId,
+        make_active: requestedStatus,
+      });
+      if (error) throw error;
+      setActivityFeedback(
+        `${users[index].name} foi ${requestedStatus ? 'ativado' : 'desativado'} com sucesso.`,
+      );
+    } catch {
+      setStatuses((current) =>
+        current.map((status, item) =>
+          item === index ? previousStatus : status,
+        ),
+      );
+      setActivityFeedback(
+        `Não foi possível ${requestedStatus ? 'ativar' : 'desativar'} ${users[index].name}.`,
+      );
+    }
+  }
+
   async function requestPasswordReset() {
     setResetWhatsappLink('');
     const selectedUser = users.find(
@@ -588,13 +622,7 @@ export default function AdminPage() {
                   <button
                     aria-label={`${statuses[index] ? 'Desativar' : 'Ativar'} ${user.name}`}
                     className={statuses[index] ? styles.on : styles.off}
-                    onClick={() =>
-                      setStatuses((current) =>
-                        current.map((status, item) =>
-                          item === index ? !status : status,
-                        ),
-                      )
-                    }
+                    onClick={() => void changeUserStatus(index)}
                   >
                     <i />
                     {statuses[index] ? 'Ativo' : 'Inativo'}
