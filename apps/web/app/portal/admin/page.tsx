@@ -45,6 +45,17 @@ type AdminMetrics = {
   downloads: number;
 };
 
+type AuditActivity = {
+  id: number;
+  company_id: string;
+  kind: string;
+  title: string;
+  metadata: Record<string, unknown> | null;
+  occurred_at: string;
+  company?: { name?: string } | null;
+  profile?: { full_name?: string } | null;
+};
+
 const emptyMetrics: AdminMetrics = {
   activeCompanies: 0,
   activePeople: 0,
@@ -71,6 +82,7 @@ export default function AdminPage() {
   const [resetFeedback, setResetFeedback] = useState('');
   const [resetWhatsappLink, setResetWhatsappLink] = useState('');
   const [activityFeedback, setActivityFeedback] = useState('');
+  const [auditActivities, setAuditActivities] = useState<AuditActivity[]>([]);
   const [inviteSent, setInviteSent] = useState(false);
   const [businessArea, setBusinessArea] = useState('personal');
   const [entityType, setEntityType] = useState('personal');
@@ -206,8 +218,37 @@ export default function AdminPage() {
     void loadCompanyUsers();
   }, []);
 
+  useEffect(() => {
+    async function loadAuditActivities() {
+      try {
+        const response = await fetch('/api/admin/activities');
+        const result = (await response.json()) as {
+          clientActivities?: AuditActivity[];
+        };
+        if (!response.ok) throw new Error('Auditoria indisponível');
+        setAuditActivities(result.clientActivities ?? []);
+      } catch {
+        setAuditActivities([]);
+      }
+    }
+    void loadAuditActivities();
+  }, []);
+
   function exportCrmActivities() {
-    const csv = 'atividade;data;detalhes';
+    const csv = [
+      'tipo;atividade;empresa;data;detalhes',
+      ...auditActivities.map((activity) =>
+        [
+          activity.kind,
+          activity.title,
+          activity.company?.name ?? activity.company_id,
+          new Date(activity.occurred_at).toLocaleString('pt-BR'),
+          JSON.stringify(activity.metadata ?? {}),
+        ]
+          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+          .join(';'),
+      ),
+    ].join('\r\n');
     downloadTextFile(
       appendNaliePolicyToCsv(csv, {
         clientName: 'Administração Nalie',
@@ -737,9 +778,38 @@ export default function AdminPage() {
                 {activityFeedback}
               </p>
             )}
-            <p className={styles.activityFeedback}>
-              Nenhuma atividade registrada ainda.
-            </p>
+            {auditActivities.length ? (
+              <ul className={styles.activity}>
+                {auditActivities.map((activity) => (
+                  <li key={activity.id}>
+                    <span>
+                      {activity.kind === 'LOGIN'
+                        ? '↗'
+                        : activity.kind === 'DOWNLOAD'
+                          ? '↓'
+                          : '▣'}
+                    </span>
+                    <p>
+                      <b>{activity.title}</b>
+                      <small>
+                        {activity.kind} ·{' '}
+                        {activity.company?.name ?? activity.company_id}
+                        {activity.profile?.full_name
+                          ? ` · ${activity.profile.full_name}`
+                          : ''}
+                      </small>
+                    </p>
+                    <small>
+                      {new Date(activity.occurred_at).toLocaleString('pt-BR')}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.activityFeedback}>
+                Nenhuma atividade registrada ainda.
+              </p>
+            )}
           </article>
         </section>
       </section>

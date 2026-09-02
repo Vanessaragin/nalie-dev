@@ -48,7 +48,9 @@ export async function GET() {
   const [clientResult, adminResult] = await Promise.all([
     access.admin
       .from('client_activities')
-      .select('id,company_id,kind,title,metadata,occurred_at')
+      .select(
+        'id,company_id,kind,title,metadata,occurred_at,company:companies(name),profile:profiles(full_name)',
+      )
       .order('occurred_at', { ascending: false }),
     access.admin
       .from('admin_activities')

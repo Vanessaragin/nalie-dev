@@ -14,6 +14,7 @@ import {
   createProtectedMultiSheetExcelBuffer,
 } from '../../../lib/nalie-data-policy';
 import { createClient } from '../../../lib/supabase/client';
+import { recordPortalActivity } from '../../../lib/record-portal-activity';
 
 const reports = [
   {
@@ -375,6 +376,10 @@ export default function ReportsPage() {
         link.rel = 'noopener';
         link.click();
         URL.revokeObjectURL(url);
+        void recordPortalActivity('DOWNLOAD', `Download de ${file.name}`, {
+          companyId: file.companyId,
+          metadata: { fileId: file.id, fileName: file.name },
+        });
         setNotice(
           `${downloadName}.zip gerado com o arquivo original e o TXT do cliente.`,
         );
@@ -431,6 +436,10 @@ export default function ReportsPage() {
     zipLink.download = `${downloadName}.zip`;
     zipLink.click();
     URL.revokeObjectURL(zipUrl);
+    void recordPortalActivity('DOWNLOAD', `Download de ${file.name}`, {
+      companyId: file.companyId,
+      metadata: { fileId: file.id, fileName: file.name },
+    });
     setNotice(`${downloadName}.zip baixado com o TXT de identificação.`);
   }
   async function downloadConsolidatedReport() {
@@ -510,6 +519,10 @@ export default function ReportsPage() {
       link.download = `nalie_compilado_${safeIdentifier}.zip`;
       link.click();
       URL.revokeObjectURL(url);
+      void recordPortalActivity('DOWNLOAD', 'Download do compilado completo', {
+        companyId: selectedCompanyId,
+        metadata: { format: 'ZIP_XLSX_TXT' },
+      });
       const { data: user } = await supabase.auth.getUser();
       await supabase.from('report_exports').insert({
         company_id: selectedCompanyId,
