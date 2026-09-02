@@ -80,7 +80,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = (
+    process.env.NALIE_PUBLIC_URL || 'https://naliebi.onrender.com'
+  ).replace(/\/$/, '');
   const redirectTo = `${origin}/primeiro-acesso?mode=recovery`;
   let whatsappLink: string | undefined;
 

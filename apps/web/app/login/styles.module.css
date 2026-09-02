@@ -100,9 +100,14 @@
 .firstAccess {
   display: block;
   max-width: 430px;
+  margin-top: 10px;
+  padding: 13px 16px;
+  border: 1px solid #f2d5de;
+  border-radius: 12px;
+  background: #fffdfe;
   text-align: center;
-  color: #8e6f7d;
-  font-size: 11px;
+  color: #704457;
+  font-size: 12px;
   font-weight: 700;
   text-decoration: none;
 }

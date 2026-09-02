@@ -26,6 +26,7 @@ export default function FirstAccessPage() {
       const currentUrl = new URL(window.location.href);
       const code = currentUrl.searchParams.get('code');
       const tokenHash = currentUrl.searchParams.get('token_hash');
+      const linkType = currentUrl.searchParams.get('type');
       // Capture hash credentials before createBrowserClient can consume and
       // remove them from the address bar.
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -49,7 +50,7 @@ export default function FirstAccessPage() {
         if (tokenHash) {
           const { error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
-            type: 'recovery',
+            type: linkType === 'invite' ? 'invite' : 'recovery',
           });
           if (error) throw error;
           window.history.replaceState(null, '', window.location.pathname);
@@ -103,7 +104,8 @@ export default function FirstAccessPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      if (!recoverySession) throw new Error('O link de acesso não está válido.');
+      if (!recoverySession)
+        throw new Error('O link de acesso não está válido.');
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -152,35 +154,35 @@ export default function FirstAccessPage() {
               </div>
             ) : recoverySession ? (
               <form onSubmit={submit}>
-              <label>
-                Nova senha
-                <input
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="Mínimo de 12 caracteres"
-                />
-              </label>
-              <label>
-                Confirmar nova senha
-                <input
-                  type="password"
-                  required
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                  placeholder="Repita a nova senha"
-                />
-              </label>
-              <ul>
-                <li>Use pelo menos 12 caracteres</li>
-                <li>Inclua letra maiúscula, minúscula, número e símbolo</li>
-                <li>Use uma senha exclusiva para o portal</li>
-              </ul>
-              <button disabled={loading}>
-                {loading ? 'Salvando…' : 'Salvar nova senha e entrar'}
-              </button>
-              {message && <p role="alert">{message}</p>}
+                <label>
+                  Nova senha
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    placeholder="Mínimo de 12 caracteres"
+                  />
+                </label>
+                <label>
+                  Confirmar nova senha
+                  <input
+                    type="password"
+                    required
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    placeholder="Repita a nova senha"
+                  />
+                </label>
+                <ul>
+                  <li>Use pelo menos 12 caracteres</li>
+                  <li>Inclua letra maiúscula, minúscula, número e símbolo</li>
+                  <li>Use uma senha exclusiva para o portal</li>
+                </ul>
+                <button disabled={loading}>
+                  {loading ? 'Salvando…' : 'Salvar nova senha e entrar'}
+                </button>
+                {message && <p role="alert">{message}</p>}
               </form>
             ) : (
               <p>Validando seu link de acesso…</p>

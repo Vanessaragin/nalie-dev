@@ -229,7 +229,9 @@ export async function POST(request: Request) {
       if (!roleIds.COMPANY_ADMIN || !roleIds.COMPANY_USER)
         throw new Error('Perfis da empresa não configurados.');
 
-      const origin = new URL(request.url).origin;
+      const origin = (
+        process.env.NALIE_PUBLIC_URL || 'https://naliebi.onrender.com'
+      ).replace(/\/$/, '');
       for (const user of users) {
         let authUser = await findUserByEmail(adminClient, user.email);
         let invitationSent = false;
