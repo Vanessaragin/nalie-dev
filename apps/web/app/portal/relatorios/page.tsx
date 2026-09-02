@@ -563,28 +563,30 @@ export default function ReportsPage() {
               somente armazenados, sem leitura, tratamento ou conversão.
             </p>
           </div>
-          {isAdministrator && (
-            <label className={styles.destinationField}>
-              Empresa de destino
-              <select
-                value={selectedCompanyId}
-                onChange={(event) => setSelectedCompanyId(event.target.value)}
-              >
-                <option value="">Selecione a empresa</option>
-                {companyOptions.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <FileImportButton
-            disabled={isAdministrator && !selectedCompanyId}
-            className={styles.primaryLink}
-            label="＋ Importar arquivo"
-            onFile={(file) => void storeImportedFile(file)}
-          />
+          <div className={styles.uploadControls}>
+            {isAdministrator && (
+              <label className={styles.destinationField}>
+                Empresa de destino
+                <select
+                  value={selectedCompanyId}
+                  onChange={(event) => setSelectedCompanyId(event.target.value)}
+                >
+                  <option value="">Selecione a empresa</option>
+                  {companyOptions.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <FileImportButton
+              disabled={isAdministrator && !selectedCompanyId}
+              className={styles.primaryLink}
+              label="＋ Importar arquivo"
+              onFile={(file) => void storeImportedFile(file)}
+            />
+          </div>
         </section>
         <section className={styles.grid}>
           {reports.map((report) => (

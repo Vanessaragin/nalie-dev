@@ -11,6 +11,10 @@
   border-radius: 13px;
   background: linear-gradient(105deg, #ffe7ee, #ffe7ee);
 }
+.highlight > div:first-child {
+  flex: 1 1 520px;
+  min-width: 0;
+}
 .highlight span {
   color: #7c4b5e;
   font-size: 10px;
@@ -40,6 +44,21 @@
   background: #fffafb;
   color: #623044;
   font: inherit;
+}
+.uploadControls {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-left: auto;
+}
+.uploadControls .primaryLink {
+  display: inline-flex;
+  min-height: 43px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
 }
 .highlight button {
   height: 43px;
@@ -361,6 +380,12 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 17px;
+  }
+  .uploadControls {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
   .clientFilter {
     width: 100%;
