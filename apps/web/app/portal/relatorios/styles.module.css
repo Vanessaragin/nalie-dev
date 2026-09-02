@@ -23,6 +23,24 @@
   margin: 0;
   color: #7c3450;
 }
+.destinationField {
+  display: grid;
+  flex: 0 0 230px;
+  gap: 7px;
+  color: #623044;
+  font-size: 12px;
+  font-weight: 800;
+}
+.destinationField select {
+  width: 100%;
+  min-height: 43px;
+  padding: 0 36px 0 12px;
+  border: 1px solid #e6a5b8;
+  border-radius: 9px;
+  background: #fffafb;
+  color: #623044;
+  font: inherit;
+}
 .highlight button {
   height: 43px;
   padding: 0 18px;
@@ -236,7 +254,7 @@
   font: inherit;
 }
 .importedFileScroller {
-  max-height: 245px;
+  max-height: 320px;
   margin-top: 14px;
   padding-right: 7px;
   overflow-y: auto;

@@ -45,29 +45,37 @@ export async function GET(request: Request) {
       await authenticatedClient.rpc('current_company_id');
     companyId = String(ownCompanyId ?? '');
   }
-  if (!/^[0-9a-f-]{36}$/i.test(companyId))
+  const allCompanies = Boolean(isAdministrator && !companyId);
+  if (!allCompanies && !/^[0-9a-f-]{36}$/i.test(companyId))
     return NextResponse.json({ documents: [] });
 
   const admin = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const [{ data: documents, error }, { data: company }] = await Promise.all([
-    admin
-      .from('company_documents')
-      .select(
-        'id,file_name,storage_path,uploaded_by,created_at,byte_size,checksum_sha256,storage_status',
-      )
-      .eq('company_id', companyId)
-      .eq('category', 'stored_upload')
-      .order('created_at', { ascending: false }),
-    admin
-      .from('companies')
-      .select('display_name,import_identifier')
-      .eq('id', companyId)
-      .single(),
-  ]);
+  let documentQuery = admin
+    .from('company_documents')
+    .select(
+      'id,company_id,file_name,storage_path,uploaded_by,created_at,byte_size,checksum_sha256,storage_status',
+    )
+    .eq('category', 'stored_upload')
+    .order('created_at', { ascending: false });
+  if (!allCompanies) documentQuery = documentQuery.eq('company_id', companyId);
+  const { data: documents, error } = await documentQuery;
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const companyIds = Array.from(
+    new Set((documents ?? []).map((document) => document.company_id)),
+  );
+  const { data: companies } = companyIds.length
+    ? await admin
+        .from('companies')
+        .select('id,display_name,import_identifier')
+        .in('id', companyIds)
+    : { data: [] };
+  const companyById = new Map(
+    (companies ?? []).map((company) => [company.id, company]),
+  );
 
   const uploaderIds = Array.from(
     new Set(
@@ -84,9 +92,19 @@ export async function GET(request: Request) {
     : { data: [] };
   return NextResponse.json({
     companyId,
-    companyName: company?.display_name ?? 'Empresa do cliente',
-    importIdentifier: company?.import_identifier ?? companyId,
-    documents: documents ?? [],
+    companyName:
+      companyById.get(companyId)?.display_name ?? 'Empresa do cliente',
+    importIdentifier:
+      companyById.get(companyId)?.import_identifier ?? companyId,
+    documents: (documents ?? []).map((document) => ({
+      ...document,
+      company_name:
+        companyById.get(document.company_id)?.display_name ??
+        'Empresa do cliente',
+      import_identifier:
+        companyById.get(document.company_id)?.import_identifier ??
+        document.company_id,
+    })),
     uploaders: Object.fromEntries(
       (profiles ?? []).map((profile) => [profile.id, profile.display_name]),
     ),

@@ -196,9 +196,10 @@ export default function ReportsPage() {
   useEffect(() => {
     async function loadStoredFiles() {
       try {
-        const query = selectedCompanyId
-          ? `?companyId=${encodeURIComponent(selectedCompanyId)}`
-          : '';
+        const query =
+          selectedCompanyId && !isAdministrator
+            ? `?companyId=${encodeURIComponent(selectedCompanyId)}`
+            : '';
         const response = await fetch(`/api/admin/company-files${query}`);
         const result = (await response.json()) as {
           error?: string;
@@ -208,6 +209,9 @@ export default function ReportsPage() {
           uploaders?: Record<string, string>;
           documents?: Array<{
             id: string;
+            company_id: string;
+            company_name: string;
+            import_identifier: string;
             file_name: string;
             storage_path: string;
             uploaded_by: string | null;
@@ -218,24 +222,26 @@ export default function ReportsPage() {
           }>;
         };
         if (!response.ok) throw new Error(result.error);
-        if (!result.companyId) {
+        if (!result.companyId && !result.documents?.length) {
           setImportedFiles([]);
           return;
         }
-        const companyId = result.companyId;
+        const companyId = result.companyId ?? '';
         const companyName = result.companyName ?? 'Empresa do cliente';
         const importIdentifier = result.importIdentifier ?? companyId;
-        setClientDataKey(importIdentifier);
-        setSelectedCompanyId(companyId);
-        setCompanyName(companyName);
-        setCompanyImportIdentifier(importIdentifier);
+        if (companyId) {
+          setClientDataKey(importIdentifier);
+          setSelectedCompanyId(companyId);
+          setCompanyName(companyName);
+          setCompanyImportIdentifier(importIdentifier);
+        }
         setImportedFiles(
           (result.documents ?? []).map((document) => ({
             id: document.id,
             name: document.file_name,
-            companyId,
+            companyId: document.company_id,
             userId: document.uploaded_by ?? undefined,
-            company: companyName,
+            company: document.company_name,
             person:
               result.uploaders?.[document.uploaded_by ?? ''] ??
               'Usuário da empresa',
@@ -247,7 +253,7 @@ export default function ReportsPage() {
             storagePath: document.storage_path,
             byteSize: document.byte_size ?? undefined,
             checksumSha256: document.checksum_sha256 ?? undefined,
-            importIdentifier,
+            importIdentifier: document.import_identifier,
           })),
         );
       } catch {
@@ -255,7 +261,7 @@ export default function ReportsPage() {
       }
     }
     void loadStoredFiles();
-  }, [selectedCompanyId]);
+  }, [isAdministrator, selectedCompanyId]);
 
   async function storeImportedFile(file: File) {
     try {
@@ -558,7 +564,7 @@ export default function ReportsPage() {
             </p>
           </div>
           {isAdministrator && (
-            <label>
+            <label className={styles.destinationField}>
               Empresa de destino
               <select
                 value={selectedCompanyId}
