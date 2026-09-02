@@ -183,7 +183,6 @@ export default function ClientCalendarPage() {
       setSaving(false);
     }
   }
-  const newestEvent = events.at(-1);
   const visibleEvents = events.filter((item) => item.date.startsWith(period));
   const [periodYear, periodMonth] = period.split('-').map(Number);
   const daysInMonth = new Date(periodYear, periodMonth, 0).getDate();
@@ -216,29 +215,6 @@ export default function ClientCalendarPage() {
             </button>
           </div>
         </header>
-        {newestEvent ? (
-          <section className={styles.paymentReminder}>
-            <span>🔔</span>
-            <div>
-              <b>
-                Próximo lembrete · dia {newestEvent.day}, às {newestEvent.time}
-              </b>
-              <p>
-                {newestEvent.title} · aviso configurado para{' '}
-                {newestEvent.reminder}. Todo compromisso salvo aparece no dia
-                correto do calendário e nesta área de lembretes.
-              </p>
-            </div>
-          </section>
-        ) : (
-          <section className={styles.paymentReminder}>
-            <span>🔔</span>
-            <div>
-              <b>Nenhum compromisso cadastrado</b>
-              <p>Os eventos reais da empresa aparecerão aqui.</p>
-            </div>
-          </section>
-        )}
         {notice && <p role="status">{notice}</p>}
         {showForm && (
           <form className={styles.eventForm} onSubmit={addEvent}>
