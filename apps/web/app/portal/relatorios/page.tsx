@@ -136,16 +136,6 @@ function financialRows(
   );
 }
 
-async function calculateSha256(file: File) {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    await file.arrayBuffer(),
-  );
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 const seedImportedFiles: ImportedFile[] = [];
 
 export default function ReportsPage() {
@@ -279,115 +269,62 @@ export default function ReportsPage() {
 
   async function storeImportedFile(file: File) {
     try {
-      if (isAdministrator) {
-        if (!selectedCompanyId)
-          throw new Error('Selecione a empresa que receberá o arquivo.');
-        const body = new FormData();
-        body.set('companyId', selectedCompanyId);
-        body.set('file', file);
-        const response = await fetch('/api/admin/company-files', {
-          method: 'POST',
-          body,
-        });
-        const result = (await response.json()) as {
-          error?: string;
-          id?: string;
-          storagePath?: string;
-          checksum?: string;
-          createdAt?: string;
-          companyName?: string;
-          importIdentifier?: string;
-        };
-        if (!response.ok || !result.id) throw new Error(result.error);
-        const { data: authData } = await createClient().auth.getUser();
-        setImportedFiles((current) => [
-          {
-            id: result.id!,
-            name: file.name,
-            companyId: selectedCompanyId,
-            userId: authData.user?.id,
-            company: result.companyName ?? 'Empresa cliente',
-            person:
-              authData.user?.user_metadata?.full_name ??
-              authData.user?.email ??
-              'Administração',
-            date: new Date(result.createdAt ?? Date.now()).toLocaleDateString(
-              'pt-BR',
-            ),
-            status: 'Armazenado · íntegro',
-            storagePath: result.storagePath,
-            byteSize: file.size,
-            checksumSha256: result.checksum,
-            importIdentifier: result.importIdentifier ?? selectedCompanyId,
-          },
-          ...current,
-        ]);
-        setNotice(`${file.name} armazenado com segurança.`);
-        return;
+      if (isAdministrator && !selectedCompanyId)
+        throw new Error('Selecione a empresa que receberá o arquivo.');
+      const body = new FormData();
+      if (selectedCompanyId) body.set('companyId', selectedCompanyId);
+      body.set('file', file);
+      const response = await fetch('/api/admin/company-files', {
+        method: 'POST',
+        body,
+      });
+      const responseText = await response.text();
+      let result: {
+        error?: string;
+        id?: string;
+        companyId?: string;
+        storagePath?: string;
+        checksum?: string;
+        createdAt?: string;
+        companyName?: string;
+        importIdentifier?: string;
+      } = {};
+      try {
+        result = JSON.parse(responseText) as typeof result;
+      } catch {
+        if (!response.ok)
+          throw new Error(
+            response.status === 413
+              ? 'O PDF excede o limite permitido de 50 MB.'
+              : `O servidor recusou o arquivo (erro ${response.status}).`,
+          );
       }
-      const supabase = createClient();
-      const { data: companyId, error: companyError } =
-        await supabase.rpc('current_company_id');
-      if (companyError || !companyId) throw companyError;
+      if (!response.ok || !result.id)
+        throw new Error(result.error || 'O servidor não confirmou o arquivo.');
 
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
-      const userId = authData.user?.id;
-      if (authError || !userId)
-        throw authError ?? new Error('Sessão inválida.');
-      const uploadId = crypto.randomUUID();
-      const checksumSha256 = await calculateSha256(file);
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
-      const storagePath = `${companyId}/${userId}/${uploadId}/${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('company-files')
-        .upload(storagePath, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw uploadError;
-
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('display_name,import_identifier')
-        .eq('id', companyId)
-        .single();
-      const { data: storedDocument, error: documentError } = await supabase
-        .from('company_documents')
-        .insert({
-          id: uploadId,
-          company_id: companyId,
-          file_name: file.name,
-          storage_path: storagePath,
-          category: 'stored_upload',
-          mime_type: file.type || 'application/octet-stream',
-          access_scope: 'company',
-          uploaded_by: userId,
-          byte_size: file.size,
-          checksum_sha256: checksumSha256,
-        })
-        .select('created_at')
-        .single();
-      if (documentError) {
-        await supabase.storage.from('company-files').remove([storagePath]);
-        throw documentError;
-      }
+      const { data: authData } = await createClient().auth.getUser();
+      const companyId = result.companyId || selectedCompanyId;
+      if (!companyId)
+        throw new Error('A empresa do arquivo não foi confirmada.');
       setImportedFiles((current) => [
         {
-          id: uploadId,
+          id: result.id!,
           name: file.name,
           companyId,
-          userId,
-          company: companyData?.display_name ?? 'Empresa do cliente',
+          userId: authData.user?.id,
+          company: result.companyName ?? companyName,
           person:
             authData.user?.user_metadata?.full_name ??
             authData.user?.email ??
             'Usuário da empresa',
-          date: new Date(
-            storedDocument?.created_at ?? Date.now(),
-          ).toLocaleDateString('pt-BR'),
+          date: new Date(result.createdAt ?? Date.now()).toLocaleDateString(
+            'pt-BR',
+          ),
           status: 'Armazenado · íntegro',
-          storagePath,
+          storagePath: result.storagePath,
           byteSize: file.size,
-          checksumSha256,
-          importIdentifier: companyData?.import_identifier ?? companyId,
+          checksumSha256: result.checksum,
+          importIdentifier: result.importIdentifier ?? companyImportIdentifier,
         },
         ...current,
       ]);

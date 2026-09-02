@@ -35,18 +35,38 @@ export async function POST(request: Request) {
     authenticatedClient.auth.getClaims(),
     authenticatedClient.rpc('is_super_admin'),
   ]);
-  if (!claims?.claims || !isAdministrator)
+  if (!claims?.claims)
     return NextResponse.json(
-      { error: 'Acesso não autorizado.' },
-      { status: 403 },
+      { error: 'Sessão inválida. Entre novamente no portal.' },
+      { status: 401 },
     );
 
   const form = await request.formData();
-  const companyId = String(form.get('companyId') ?? '');
+  const requestedCompanyId = String(form.get('companyId') ?? '');
   const file = form.get('file');
-  if (!/^[0-9a-f-]{36}$/i.test(companyId) || !(file instanceof File))
+  if (!(file instanceof File))
     return NextResponse.json(
-      { error: 'Selecione a empresa e o arquivo.' },
+      { error: 'Selecione um arquivo válido.' },
+      { status: 400 },
+    );
+
+  let companyId = requestedCompanyId;
+  if (!isAdministrator) {
+    const { data: memberCompanyId, error: companyIdError } =
+      await authenticatedClient.rpc('current_company_id');
+    if (companyIdError || !memberCompanyId)
+      return NextResponse.json(
+        {
+          error:
+            'Seu usuário não está vinculado a uma empresa ativa. Entre novamente ou solicite a ativação do acesso.',
+        },
+        { status: 403 },
+      );
+    companyId = String(memberCompanyId);
+  }
+  if (!/^[0-9a-f-]{36}$/i.test(companyId))
+    return NextResponse.json(
+      { error: 'Selecione a empresa que receberá o arquivo.' },
       { status: 400 },
     );
   if (file.size === 0 || file.size > MAX_FILE_SIZE)
@@ -108,6 +128,7 @@ export async function POST(request: Request) {
   }
   return NextResponse.json({
     id,
+    companyId,
     storagePath,
     checksum,
     createdAt: document.created_at,
