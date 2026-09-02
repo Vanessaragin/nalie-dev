@@ -94,6 +94,18 @@ export default function PaymentsPage() {
         const companies = new Map(
           (companiesResult.data ?? []).map((company) => [company.id, company]),
         );
+        const companiesWithLogin = await Promise.all(
+          [...companies.values()].map(async (company) => {
+            const { data: hasCompletedLogin } = await supabase.rpc(
+              'company_has_completed_login',
+              { target_company_id: company.id },
+            );
+            return hasCompletedLogin ? company.id : null;
+          }),
+        );
+        const activeCompanyIds = new Set(
+          companiesWithLogin.filter((companyId) => companyId !== null),
+        );
         const subscriptions = new Map(
           (subscriptionsResult.data ?? []).map((subscription) => [
             subscription.company_id,
@@ -110,32 +122,36 @@ export default function PaymentsPage() {
           RECEIVED: 'Recebido',
         };
         setPayments(
-          (paymentsResult.data ?? []).map((payment) => ({
-            id: payment.id,
-            companyId: payment.company_id,
-            subscriptionId: payment.subscription_id,
-            seriesKey: payment.series_key,
-            receiptPath: payment.confirmation_file_path,
-            client:
-              companies.get(payment.company_id)?.display_name ??
-              'Empresa não encontrada',
-            plan: payment.service_name,
-            due: payment.due_date,
-            value: Number(payment.amount),
-            status: labels[payment.payment_status] ?? 'Pendente',
-            importsBlocked:
-              subscriptions.get(payment.company_id)?.imports_blocked ?? false,
-          })),
+          (paymentsResult.data ?? [])
+            .filter((payment) => activeCompanyIds.has(payment.company_id))
+            .map((payment) => ({
+              id: payment.id,
+              companyId: payment.company_id,
+              subscriptionId: payment.subscription_id,
+              seriesKey: payment.series_key,
+              receiptPath: payment.confirmation_file_path,
+              client:
+                companies.get(payment.company_id)?.display_name ??
+                'Empresa não encontrada',
+              plan: payment.service_name,
+              due: payment.due_date,
+              value: Number(payment.amount),
+              status: labels[payment.payment_status] ?? 'Pendente',
+              importsBlocked:
+                subscriptions.get(payment.company_id)?.imports_blocked ?? false,
+            })),
         );
         const template = initialCrmData.clients[0];
         setCrmClients(
-          [...companies.values()].map((company) => ({
-            ...template,
-            id: `CLI-${company.id.slice(0, 8).toUpperCase()}`,
-            companyId: company.id,
-            name: company.display_name,
-            company: company.display_name,
-          })),
+          [...companies.values()]
+            .filter((company) => activeCompanyIds.has(company.id))
+            .map((company) => ({
+              ...template,
+              id: `CLI-${company.id.slice(0, 8).toUpperCase()}`,
+              companyId: company.id,
+              name: company.display_name,
+              company: company.display_name,
+            })),
         );
       } catch {
         setPayments([]);
@@ -433,7 +449,7 @@ export default function PaymentsPage() {
       <section className={`${shell.content} ${styles.content}`}>
         <header>
           <div>
-            <h1>Pagamentos dos meus serviços</h1>
+            <h1>Pagamentos</h1>
             <p>
               Controle cobranças, vencimentos e recebimentos de cada cliente.
             </p>

@@ -9,6 +9,19 @@ function hasSupabaseConfiguration() {
   return Boolean(url && key && !url.includes('your-project'));
 }
 
+const limitedRoutes = [
+  '/portal/analises',
+  '/portal/calendario/cliente',
+  '/portal/sobre-mim',
+  '/portal/politicas',
+];
+
+function isLimitedRouteAllowed(pathname: string) {
+  return limitedRoutes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const portalRequest = request.nextUrl.pathname.startsWith('/portal');
 
@@ -54,7 +67,38 @@ export async function proxy(request: NextRequest) {
     const { data: portalAllowed, error: portalAccessError } =
       await supabase.rpc('can_access_portal');
     if (portalAccessError || !portalAllowed) {
-      return NextResponse.redirect(new URL('/login?reason=blocked', request.url));
+      return NextResponse.redirect(
+        new URL('/login?reason=blocked', request.url),
+      );
+    }
+    const { data: superAdmin } = await supabase.rpc('is_super_admin');
+    if (!superAdmin) {
+      const userId = String(data?.claims?.sub ?? '');
+      const { data: memberships, error: membershipError } = await supabase
+        .from('company_users')
+        .select('access_level')
+        .eq('profile_id', userId)
+        .eq('status', 'ACTIVE');
+      if (membershipError) {
+        return NextResponse.redirect(
+          new URL('/login?reason=blocked', request.url),
+        );
+      }
+      const hasCompleteAccess = (memberships ?? []).some(
+        (membership) => membership.access_level === 'COMPLETE',
+      );
+      const hasLimitedAccess = (memberships ?? []).some(
+        (membership) => membership.access_level === 'LIMITED',
+      );
+      if (
+        !hasCompleteAccess &&
+        hasLimitedAccess &&
+        !isLimitedRouteAllowed(request.nextUrl.pathname)
+      ) {
+        return NextResponse.redirect(
+          new URL('/portal/analises?tab=conteudos', request.url),
+        );
+      }
     }
   }
   if (
