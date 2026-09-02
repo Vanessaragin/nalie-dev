@@ -87,10 +87,21 @@ export async function POST(request: Request) {
   let whatsappLink: string | undefined;
 
   if (body.channel === 'email' || body.channel === 'both') {
-    const { error } = await authenticatedClient.auth.resetPasswordForEmail(
-      email,
-      { redirectTo },
-    );
+    // The authenticated SSR client uses PKCE and stores its verifier in the
+    // administrator's browser cookies. The recipient opens the e-mail in a
+    // different browser, so that verifier is unavailable. Recovery e-mails
+    // must therefore use the implicit flow, whose session is delivered in the
+    // redirect hash and consumed by the first-access page.
+    const recoveryClient = createClient(url, publishableKey, {
+      auth: {
+        flowType: 'implicit',
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+    const { error } = await recoveryClient.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 502 });
     }
