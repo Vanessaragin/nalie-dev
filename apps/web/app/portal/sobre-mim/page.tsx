@@ -35,7 +35,6 @@ export default function AboutPage() {
   const [photoUrl, setPhotoUrl] = useState(NALIE_PROFILE_PHOTO);
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [showContactOptions, setShowContactOptions] = useState(false);
   useEffect(() => {
     try {
       void createClient()
@@ -275,24 +274,41 @@ export default function AboutPage() {
             <ul>
               <li>
                 <i>✉</i>
-                <p>
+                <a
+                  href={emailUrl}
+                  aria-label={`Enviar e-mail para ${data.email}`}
+                >
                   <b>E-mail</b>
                   <small>{data.email}</small>
-                </p>
+                </a>
               </li>
               <li>
                 <i>◉</i>
-                <p>
-                  <b>WhatsApp</b>
-                  <small>{data.whatsapp}</small>
-                </p>
+                {hasWhatsapp ? (
+                  <a href={whatsappUrl} target="_blank" rel="noreferrer">
+                    <b>WhatsApp</b>
+                    <small>{data.whatsapp}</small>
+                  </a>
+                ) : (
+                  <p>
+                    <b>WhatsApp</b>
+                    <small>{data.whatsapp}</small>
+                  </p>
+                )}
               </li>
               <li>
                 <i>◎</i>
-                <p>
-                  <b>Instagram</b>
-                  <small>{data.linkedin}</small>
-                </p>
+                {hasInstagram ? (
+                  <a href={instagramUrl} target="_blank" rel="noreferrer">
+                    <b>Instagram</b>
+                    <small>{data.linkedin}</small>
+                  </a>
+                ) : (
+                  <p>
+                    <b>Instagram</b>
+                    <small>{data.linkedin}</small>
+                  </p>
+                )}
               </li>
               <li>
                 <i>⌖</i>
@@ -302,28 +318,6 @@ export default function AboutPage() {
                 </p>
               </li>
             </ul>
-            <button
-              type="button"
-              onClick={() => setShowContactOptions((current) => !current)}
-              aria-expanded={showContactOptions}
-            >
-              Enviar uma mensagem →
-            </button>
-            {showContactOptions && (
-              <div className={styles.contactOptions}>
-                <a href={emailUrl}>✉ Enviar por e-mail</a>
-                {hasWhatsapp && (
-                  <a href={whatsappUrl} target="_blank" rel="noreferrer">
-                    ◉ Enviar pelo WhatsApp
-                  </a>
-                )}
-                {hasInstagram && (
-                  <a href={instagramUrl} target="_blank" rel="noreferrer">
-                    ◎ Abrir conversa no Instagram
-                  </a>
-                )}
-              </div>
-            )}
           </aside>
         </section>
         <section className={styles.services}>
