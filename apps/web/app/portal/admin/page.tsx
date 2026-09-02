@@ -52,8 +52,8 @@ type AuditActivity = {
   title: string;
   metadata: Record<string, unknown> | null;
   occurred_at: string;
-  company?: { name?: string } | null;
-  profile?: { full_name?: string } | null;
+  company?: { display_name?: string } | null;
+  profile?: { display_name?: string } | null;
 };
 
 const emptyMetrics: AdminMetrics = {
@@ -241,7 +241,7 @@ export default function AdminPage() {
         [
           activity.kind,
           activity.title,
-          activity.company?.name ?? activity.company_id,
+          activity.company?.display_name ?? activity.company_id,
           new Date(activity.occurred_at).toLocaleString('pt-BR'),
           JSON.stringify(activity.metadata ?? {}),
         ]
@@ -793,9 +793,9 @@ export default function AdminPage() {
                       <b>{activity.title}</b>
                       <small>
                         {activity.kind} ·{' '}
-                        {activity.company?.name ?? activity.company_id}
-                        {activity.profile?.full_name
-                          ? ` · ${activity.profile.full_name}`
+                        {activity.company?.display_name ?? activity.company_id}
+                        {activity.profile?.display_name
+                          ? ` · ${activity.profile.display_name}`
                           : ''}
                       </small>
                     </p>

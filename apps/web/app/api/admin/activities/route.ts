@@ -49,7 +49,7 @@ export async function GET() {
     access.admin
       .from('client_activities')
       .select(
-        'id,company_id,kind,title,metadata,occurred_at,company:companies(name),profile:profiles(full_name)',
+        'id,company_id,kind,title,metadata,occurred_at,company:companies(display_name),profile:profiles(display_name)',
       )
       .order('occurred_at', { ascending: false }),
     access.admin

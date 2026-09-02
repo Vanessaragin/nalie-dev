@@ -68,6 +68,13 @@ type ConsolidatedExport = {
   cartao_parcelas_futuras: FinancialExportRecord[];
 };
 
+type RecentReport = {
+  id: string;
+  title: string;
+  detail: string;
+  occurredAt: string;
+};
+
 const consolidatedColumns = {
   movimentacoes_conta: [
     'banco_origem',
@@ -149,6 +156,8 @@ export default function ReportsPage() {
     useState('Não selecionado');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [isAdministrator, setIsAdministrator] = useState(false);
+  const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
+  const [showFullReportAudit, setShowFullReportAudit] = useState(false);
   const [companyOptions, setCompanyOptions] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -264,6 +273,78 @@ export default function ReportsPage() {
     void loadStoredFiles();
   }, [isAdministrator, selectedCompanyId]);
 
+  useEffect(() => {
+    let active = true;
+    async function loadRecentReports() {
+      try {
+        const supabase = createClient({ detectSessionInUrl: false });
+        let activitiesQuery = supabase
+          .from('client_activities')
+          .select('id,company_id,kind,title,occurred_at')
+          .in('kind', ['DOWNLOAD', 'IMPORT'])
+          .order('occurred_at', { ascending: false })
+          .limit(30);
+        let exportsQuery = supabase
+          .from('report_exports')
+          .select('id,company_id,report_type,format,status,created_at')
+          .order('created_at', { ascending: false })
+          .limit(30);
+        if (selectedCompanyId) {
+          activitiesQuery = activitiesQuery.eq('company_id', selectedCompanyId);
+          exportsQuery = exportsQuery.eq('company_id', selectedCompanyId);
+        } else if (!isAdministrator) {
+          setRecentReports([]);
+          return;
+        }
+        const [activitiesResult, exportsResult] = await Promise.all([
+          activitiesQuery,
+          exportsQuery,
+        ]);
+        if (activitiesResult.error || exportsResult.error)
+          throw activitiesResult.error ?? exportsResult.error;
+        const activityRows: RecentReport[] = (activitiesResult.data ?? []).map(
+          (activity) => ({
+            id: `activity-${activity.id}`,
+            title: activity.title,
+            detail:
+              activity.kind === 'DOWNLOAD'
+                ? 'Download realizado'
+                : 'Arquivo importado',
+            occurredAt: activity.occurred_at,
+          }),
+        );
+        const exportRows: RecentReport[] = (exportsResult.data ?? []).map(
+          (report) => ({
+            id: `export-${report.id}`,
+            title:
+              report.report_type === 'FINANCIAL_CONSOLIDATED'
+                ? 'Compilado completo da empresa'
+                : report.report_type,
+            detail: `${report.format} · ${report.status}`,
+            occurredAt: report.created_at,
+          }),
+        );
+        if (active)
+          setRecentReports(
+            [...activityRows, ...exportRows]
+              .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+              .slice(0, 30),
+          );
+      } catch {
+        if (active) setRecentReports([]);
+      }
+    }
+    void loadRecentReports();
+    window.addEventListener('nalie-report-history-updated', loadRecentReports);
+    return () => {
+      active = false;
+      window.removeEventListener(
+        'nalie-report-history-updated',
+        loadRecentReports,
+      );
+    };
+  }, [isAdministrator, selectedCompanyId]);
+
   async function storeImportedFile(file: File) {
     try {
       if (isAdministrator && !selectedCompanyId)
@@ -376,10 +457,11 @@ export default function ReportsPage() {
         link.rel = 'noopener';
         link.click();
         URL.revokeObjectURL(url);
-        void recordPortalActivity('DOWNLOAD', `Download de ${file.name}`, {
+        await recordPortalActivity('DOWNLOAD', `Download de ${file.name}`, {
           companyId: file.companyId,
           metadata: { fileId: file.id, fileName: file.name },
         });
+        window.dispatchEvent(new Event('nalie-report-history-updated'));
         setNotice(
           `${downloadName}.zip gerado com o arquivo original e o TXT do cliente.`,
         );
@@ -436,10 +518,11 @@ export default function ReportsPage() {
     zipLink.download = `${downloadName}.zip`;
     zipLink.click();
     URL.revokeObjectURL(zipUrl);
-    void recordPortalActivity('DOWNLOAD', `Download de ${file.name}`, {
+    await recordPortalActivity('DOWNLOAD', `Download de ${file.name}`, {
       companyId: file.companyId,
       metadata: { fileId: file.id, fileName: file.name },
     });
+    window.dispatchEvent(new Event('nalie-report-history-updated'));
     setNotice(`${downloadName}.zip baixado com o TXT de identificação.`);
   }
   async function downloadConsolidatedReport() {
@@ -519,7 +602,7 @@ export default function ReportsPage() {
       link.download = `nalie_compilado_${safeIdentifier}.zip`;
       link.click();
       URL.revokeObjectURL(url);
-      void recordPortalActivity('DOWNLOAD', 'Download do compilado completo', {
+      await recordPortalActivity('DOWNLOAD', 'Download do compilado completo', {
         companyId: selectedCompanyId,
         metadata: { format: 'ZIP_XLSX_TXT' },
       });
@@ -531,6 +614,7 @@ export default function ReportsPage() {
         requested_by: user.user?.id ?? null,
         status: 'completed',
       });
+      window.dispatchEvent(new Event('nalie-report-history-updated'));
       setNotice(
         `Compilado exportado com ${result.total_rows} registros e TXT de identificação.`,
       );
@@ -707,9 +791,30 @@ export default function ReportsPage() {
               <b>Relatórios recentes</b>
               <small>Downloads e gerações ficam registrados.</small>
             </div>
-            <button>Ver auditoria</button>
+            <button
+              type="button"
+              onClick={() => setShowFullReportAudit((current) => !current)}
+            >
+              {showFullReportAudit ? 'Mostrar menos' : 'Ver auditoria'}
+            </button>
           </div>
-          <p>Nenhum relatório foi gerado ainda.</p>
+          {recentReports.length ? (
+            <div className={styles.importedFileScroller}>
+              {recentReports
+                .slice(0, showFullReportAudit ? 30 : 5)
+                .map((report) => (
+                  <div className={styles.row} key={report.id}>
+                    <b>{report.title}</b>
+                    <span>{report.detail}</span>
+                    <span>
+                      {new Date(report.occurredAt).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <p>Nenhum relatório foi gerado ainda.</p>
+          )}
         </section>
       </section>
     </main>
