@@ -15,6 +15,84 @@ const allowedTypes = new Set([
   'application/octet-stream',
 ]);
 
+export async function GET(request: Request) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !publishableKey || !serviceRoleKey)
+    return NextResponse.json(
+      { error: 'Configuração segura indisponível.' },
+      { status: 503 },
+    );
+
+  const cookieStore = await cookies();
+  const authenticatedClient = createServerClient(url, publishableKey, {
+    cookies: { getAll: () => cookieStore.getAll(), setAll: () => undefined },
+  });
+  const [{ data: claims }, { data: isAdministrator }] = await Promise.all([
+    authenticatedClient.auth.getClaims(),
+    authenticatedClient.rpc('is_super_admin'),
+  ]);
+  if (!claims?.claims)
+    return NextResponse.json({ error: 'Sessão inválida.' }, { status: 401 });
+
+  const requestedCompanyId = new URL(request.url).searchParams.get('companyId');
+  let companyId = requestedCompanyId ?? '';
+  if (!isAdministrator) {
+    const { data: ownCompanyId } =
+      await authenticatedClient.rpc('current_company_id');
+    companyId = String(ownCompanyId ?? '');
+  }
+  if (!/^[0-9a-f-]{36}$/i.test(companyId))
+    return NextResponse.json({ documents: [] });
+
+  const admin = createClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const [{ data: documents, error }, { data: company }] = await Promise.all([
+    admin
+      .from('company_documents')
+      .select(
+        'id,file_name,storage_path,uploaded_by,created_at,byte_size,checksum_sha256,storage_status',
+      )
+      .eq('company_id', companyId)
+      .eq('category', 'stored_upload')
+      .order('created_at', { ascending: false }),
+    admin
+      .from('companies')
+      .select('display_name,import_identifier')
+      .eq('id', companyId)
+      .single(),
+  ]);
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const uploaderIds = Array.from(
+    new Set(
+      (documents ?? [])
+        .map((document) => document.uploaded_by)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const { data: profiles } = uploaderIds.length
+    ? await admin
+        .from('profiles')
+        .select('id,display_name')
+        .in('id', uploaderIds)
+    : { data: [] };
+  return NextResponse.json({
+    companyId,
+    companyName: company?.display_name ?? 'Empresa do cliente',
+    importIdentifier: company?.import_identifier ?? companyId,
+    documents: documents ?? [],
+    uploaders: Object.fromEntries(
+      (profiles ?? []).map((profile) => [profile.id, profile.display_name]),
+    ),
+  });
+}
+
 export async function POST(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey =

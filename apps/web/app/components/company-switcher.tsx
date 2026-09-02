@@ -25,24 +25,28 @@ function readStoredValue(key: string) {
 }
 
 export default function CompanySwitcher({ className }: { className: string }) {
-  const [companies, setCompanies] = useState<CompanyOption[]>(() => {
-    try {
-      const cached = readStoredValue(ACCOUNT_COMPANY_KEY);
-      return cached ? [JSON.parse(cached) as CompanyOption] : [];
-    } catch {
-      return [];
-    }
-  });
-  const [selectedId, setSelectedId] = useState(() =>
-    readStoredValue(SELECTED_COMPANY_KEY),
-  );
-  const [administratorName, setAdministratorName] = useState(() =>
-    readStoredValue(ADMINISTRATOR_NAME_KEY),
-  );
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [administratorName, setAdministratorName] = useState('');
   const [identityLoaded, setIdentityLoaded] = useState(false);
 
   useEffect(() => {
     const storage = window.localStorage;
+    const cachedAdministratorName = readStoredValue(ADMINISTRATOR_NAME_KEY);
+    const cachedSelectedId = readStoredValue(SELECTED_COMPANY_KEY);
+    const cachedCompany = readStoredValue(ACCOUNT_COMPANY_KEY);
+    queueMicrotask(() => {
+      if (cachedAdministratorName)
+        setAdministratorName(cachedAdministratorName);
+      if (cachedSelectedId) setSelectedId(cachedSelectedId);
+      if (cachedCompany) {
+        try {
+          setCompanies([JSON.parse(cachedCompany) as CompanyOption]);
+        } catch {
+          storage.removeItem(ACCOUNT_COMPANY_KEY);
+        }
+      }
+    });
     async function load() {
       try {
         const supabase = createClient({ detectSessionInUrl: false });

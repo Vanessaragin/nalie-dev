@@ -196,94 +196,48 @@ export default function ReportsPage() {
   useEffect(() => {
     async function loadStoredFiles() {
       try {
-        const supabase = createClient();
-        const { data: companyId, error: companyError } =
-          await supabase.rpc('current_company_id');
-        if (companyError || !companyId) throw companyError;
-
-        const [initialDocumentsResult, companyResult, userResult] =
-          await Promise.all([
-            supabase
-              .from('company_documents')
-              .select(
-                'id, file_name, storage_path, uploaded_by, created_at, byte_size, checksum_sha256, storage_status',
-              )
-              .eq('company_id', companyId)
-              .eq('category', 'stored_upload')
-              .order('created_at', { ascending: false }),
-            supabase
-              .from('companies')
-              .select('display_name,import_identifier')
-              .eq('id', companyId)
-              .single(),
-            supabase.auth.getUser(),
-          ]);
-        let documentsData = initialDocumentsResult.data;
-        let documentsError = initialDocumentsResult.error;
-        if (
-          documentsError &&
-          /byte_size|checksum_sha256|storage_status|schema cache/i.test(
-            documentsError.message,
-          )
-        ) {
-          const legacyDocumentsResult = await supabase
-            .from('company_documents')
-            .select('id, file_name, storage_path, uploaded_by, created_at')
-            .eq('company_id', companyId)
-            .eq('category', 'stored_upload')
-            .order('created_at', { ascending: false });
-          documentsData = (legacyDocumentsResult.data ?? []).map(
-            (document) => ({
-              ...document,
-              byte_size: null,
-              checksum_sha256: null,
-              storage_status: 'STORED',
-            }),
-          );
-          documentsError = legacyDocumentsResult.error;
+        const query = selectedCompanyId
+          ? `?companyId=${encodeURIComponent(selectedCompanyId)}`
+          : '';
+        const response = await fetch(`/api/admin/company-files${query}`);
+        const result = (await response.json()) as {
+          error?: string;
+          companyId?: string;
+          companyName?: string;
+          importIdentifier?: string;
+          uploaders?: Record<string, string>;
+          documents?: Array<{
+            id: string;
+            file_name: string;
+            storage_path: string;
+            uploaded_by: string | null;
+            created_at: string;
+            byte_size: number | null;
+            checksum_sha256: string | null;
+            storage_status: string;
+          }>;
+        };
+        if (!response.ok) throw new Error(result.error);
+        if (!result.companyId) {
+          setImportedFiles([]);
+          return;
         }
-        if (documentsError) throw documentsError;
-
-        const companyName =
-          companyResult.data?.display_name ?? 'Empresa do cliente';
-        const importIdentifier =
-          companyResult.data?.import_identifier ?? companyId;
+        const companyId = result.companyId;
+        const companyName = result.companyName ?? 'Empresa do cliente';
+        const importIdentifier = result.importIdentifier ?? companyId;
         setClientDataKey(importIdentifier);
         setSelectedCompanyId(companyId);
         setCompanyName(companyName);
         setCompanyImportIdentifier(importIdentifier);
-        const uploaderIds = Array.from(
-          new Set(
-            (documentsData ?? [])
-              .map((document) => document.uploaded_by)
-              .filter((id): id is string => Boolean(id)),
-          ),
-        );
-        const { data: uploaderProfiles } = uploaderIds.length
-          ? await supabase
-              .from('profiles')
-              .select('id, display_name')
-              .in('id', uploaderIds)
-          : { data: [] };
-        const uploaderNames = new Map(
-          (uploaderProfiles ?? []).map((profile) => [
-            profile.id,
-            profile.display_name,
-          ]),
-        );
         setImportedFiles(
-          (documentsData ?? []).map((document) => ({
+          (result.documents ?? []).map((document) => ({
             id: document.id,
             name: document.file_name,
             companyId,
             userId: document.uploaded_by ?? undefined,
             company: companyName,
             person:
-              uploaderNames.get(document.uploaded_by ?? '') ??
-              (document.uploaded_by === userResult.data.user?.id
-                ? (userResult.data.user?.user_metadata?.full_name ??
-                  userResult.data.user?.email)
-                : undefined) ??
+              result.uploaders?.[document.uploaded_by ?? ''] ??
               'Usuário da empresa',
             date: new Date(document.created_at).toLocaleDateString('pt-BR'),
             status:
@@ -301,7 +255,7 @@ export default function ReportsPage() {
       }
     }
     void loadStoredFiles();
-  }, []);
+  }, [selectedCompanyId]);
 
   async function storeImportedFile(file: File) {
     try {
