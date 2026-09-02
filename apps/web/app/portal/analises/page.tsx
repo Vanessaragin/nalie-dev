@@ -188,6 +188,20 @@ export default function AnalysisWorkspacePage() {
           companies = companies.filter((company) =>
             contractedCompanyIds.has(company.id),
           );
+          if (canManageAnalysis) {
+            const companiesWithLogin = await Promise.all(
+              companies.map(async (company) => {
+                const { data: activeUsers } = await supabase.rpc(
+                  'active_company_user_count',
+                  { target_company_id: company.id },
+                );
+                return Number(activeUsers ?? 0) > 0 ? company : null;
+              }),
+            );
+            companies = companiesWithLogin.filter(
+              (company) => company !== null,
+            );
+          }
         }
         if (!companies.length) throw new Error('Nenhuma empresa disponível.');
         const { data: links, error: linksError } = await supabase

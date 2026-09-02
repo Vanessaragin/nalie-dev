@@ -169,11 +169,22 @@ export default function ReportsPage() {
           .select('id,display_name')
           .eq('status', 'ACTIVE')
           .order('display_name');
+        const companiesWithLogin = await Promise.all(
+          (data ?? []).map(async (company) => {
+            const { data: activeUsers } = await supabase.rpc(
+              'active_company_user_count',
+              { target_company_id: company.id },
+            );
+            return Number(activeUsers ?? 0) > 0 ? company : null;
+          }),
+        );
         setCompanyOptions(
-          (data ?? []).map((company) => ({
-            id: String(company.id),
-            name: String(company.display_name),
-          })),
+          companiesWithLogin
+            .filter((company) => company !== null)
+            .map((company) => ({
+              id: String(company.id),
+              name: String(company.display_name),
+            })),
         );
       } catch {
         setCompanyOptions([]);
