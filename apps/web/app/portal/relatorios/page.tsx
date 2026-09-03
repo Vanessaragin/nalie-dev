@@ -70,6 +70,8 @@ type ConsolidatedExport = {
 
 type RecentReport = {
   id: string;
+  companyId: string;
+  company: string;
   title: string;
   detail: string;
   author: string;
@@ -160,6 +162,7 @@ export default function ReportsPage() {
   const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
   const [reportDateFrom, setReportDateFrom] = useState('');
   const [reportDateTo, setReportDateTo] = useState('');
+  const [reportCompanyFilter, setReportCompanyFilter] = useState('Todos');
   const [showFullReportAudit, setShowFullReportAudit] = useState(false);
   const [companyOptions, setCompanyOptions] = useState<
     Array<{ id: string; name: string }>
@@ -173,7 +176,9 @@ export default function ReportsPage() {
     const date = report.occurredAt.slice(0, 10);
     return (
       (!reportDateFrom || date >= reportDateFrom) &&
-      (!reportDateTo || date <= reportDateTo)
+      (!reportDateTo || date <= reportDateTo) &&
+      (reportCompanyFilter === 'Todos' ||
+        report.companyId === reportCompanyFilter)
     );
   });
   const latestStoredDate = importedFiles[0]?.date ?? 'Aguardando arquivos';
@@ -327,18 +332,44 @@ export default function ReportsPage() {
             ].filter((id): id is string => Boolean(id)),
           ),
         );
-        const { data: profiles } = profileIds.length
-          ? await supabase
-              .from('profiles')
-              .select('id,display_name')
-              .in('id', profileIds)
-          : { data: [] };
+        const companyIds = Array.from(
+          new Set([
+            ...(activitiesResult.data ?? []).map(
+              (activity) => activity.company_id,
+            ),
+            ...(exportsResult.data ?? []).map((report) => report.company_id),
+          ]),
+        );
+        const [{ data: profiles }, { data: reportCompanies }] =
+          await Promise.all([
+            profileIds.length
+              ? supabase
+                  .from('profiles')
+                  .select('id,display_name')
+                  .in('id', profileIds)
+              : Promise.resolve({ data: [] }),
+            companyIds.length
+              ? supabase
+                  .from('companies')
+                  .select('id,display_name')
+                  .in('id', companyIds)
+              : Promise.resolve({ data: [] }),
+          ]);
         const profileNames = new Map(
           (profiles ?? []).map((profile) => [profile.id, profile.display_name]),
+        );
+        const companyNames = new Map(
+          (reportCompanies ?? []).map((company) => [
+            company.id,
+            company.display_name,
+          ]),
         );
         const activityRows: RecentReport[] = (activitiesResult.data ?? []).map(
           (activity) => ({
             id: `activity-${activity.id}`,
+            companyId: activity.company_id,
+            company:
+              companyNames.get(activity.company_id) ?? 'Empresa não informada',
             title: activity.title,
             detail:
               activity.kind === 'DOWNLOAD'
@@ -353,6 +384,9 @@ export default function ReportsPage() {
         const exportRows: RecentReport[] = (exportsResult.data ?? []).map(
           (report) => ({
             id: `export-${report.id}`,
+            companyId: report.company_id,
+            company:
+              companyNames.get(report.company_id) ?? 'Empresa não informada',
             title:
               report.report_type === 'FINANCIAL_CONSOLIDATED'
                 ? 'Compilado completo da empresa'
@@ -834,6 +868,29 @@ export default function ReportsPage() {
             </div>
             <div className={styles.reportFilters}>
               <label>
+                Empresa
+                <select
+                  value={reportCompanyFilter}
+                  onChange={(event) =>
+                    setReportCompanyFilter(event.target.value)
+                  }
+                >
+                  <option value="Todos">Todas as empresas</option>
+                  {Array.from(
+                    new Map(
+                      recentReports.map((report) => [
+                        report.companyId,
+                        report.company,
+                      ]),
+                    ),
+                  ).map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
                 De
                 <input
                   type="date"
@@ -867,7 +924,9 @@ export default function ReportsPage() {
                     key={report.id}
                   >
                     <b>{report.title}</b>
-                    <span>{report.detail}</span>
+                    <span>
+                      {report.company} · {report.detail}
+                    </span>
                     <span>{report.author}</span>
                     <span>
                       {new Date(report.occurredAt).toLocaleString('pt-BR')}

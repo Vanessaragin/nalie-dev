@@ -151,7 +151,7 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  align-items: center;
+  align-items: start;
   margin-bottom: 18px;
 }
 .workflowTitle h2,
@@ -173,6 +173,8 @@
 }
 .workflowTools {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: end;
   gap: 10px;
 }
@@ -183,7 +185,8 @@
   font-size: 10px;
   font-weight: 800;
 }
-.workflowTools input {
+.workflowTools input,
+.workflowTools select {
   width: min(310px, 45vw);
   min-height: 40px;
   border: 1px solid #e6a5b8;
@@ -191,6 +194,10 @@
   background: #fffafb;
   color: #623044;
   padding: 0 11px;
+}
+.workflowTools select {
+  width: auto;
+  min-width: 145px;
 }
 .workflowTools button {
   min-height: 40px;
