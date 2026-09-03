@@ -72,6 +72,7 @@ type RecentReport = {
   id: string;
   title: string;
   detail: string;
+  author: string;
   occurredAt: string;
 };
 
@@ -157,14 +158,24 @@ export default function ReportsPage() {
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [isAdministrator, setIsAdministrator] = useState(false);
   const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
+  const [reportDateFrom, setReportDateFrom] = useState('');
+  const [reportDateTo, setReportDateTo] = useState('');
   const [showFullReportAudit, setShowFullReportAudit] = useState(false);
   const [companyOptions, setCompanyOptions] = useState<
     Array<{ id: string; name: string }>
   >([]);
   const visibleImportedFiles = importedFiles.filter(
     (file) =>
-      importedClientFilter === 'Todos' || file.person === importedClientFilter,
+      importedClientFilter === 'Todos' ||
+      file.companyId === importedClientFilter,
   );
+  const visibleRecentReports = recentReports.filter((report) => {
+    const date = report.occurredAt.slice(0, 10);
+    return (
+      (!reportDateFrom || date >= reportDateFrom) &&
+      (!reportDateTo || date <= reportDateTo)
+    );
+  });
   const latestStoredDate = importedFiles[0]?.date ?? 'Aguardando arquivos';
 
   useEffect(() => {
@@ -280,13 +291,15 @@ export default function ReportsPage() {
         const supabase = createClient({ detectSessionInUrl: false });
         let activitiesQuery = supabase
           .from('client_activities')
-          .select('id,company_id,kind,title,occurred_at')
+          .select('id,company_id,profile_id,kind,title,occurred_at')
           .in('kind', ['DOWNLOAD', 'IMPORT'])
           .order('occurred_at', { ascending: false })
           .limit(30);
         let exportsQuery = supabase
           .from('report_exports')
-          .select('id,company_id,report_type,format,status,created_at')
+          .select(
+            'id,company_id,report_type,format,status,requested_by,created_at',
+          )
           .order('created_at', { ascending: false })
           .limit(30);
         if (selectedCompanyId) {
@@ -302,6 +315,27 @@ export default function ReportsPage() {
         ]);
         if (activitiesResult.error || exportsResult.error)
           throw activitiesResult.error ?? exportsResult.error;
+        const profileIds = Array.from(
+          new Set(
+            [
+              ...(activitiesResult.data ?? []).map(
+                (activity) => activity.profile_id,
+              ),
+              ...(exportsResult.data ?? []).map(
+                (report) => report.requested_by,
+              ),
+            ].filter((id): id is string => Boolean(id)),
+          ),
+        );
+        const { data: profiles } = profileIds.length
+          ? await supabase
+              .from('profiles')
+              .select('id,display_name')
+              .in('id', profileIds)
+          : { data: [] };
+        const profileNames = new Map(
+          (profiles ?? []).map((profile) => [profile.id, profile.display_name]),
+        );
         const activityRows: RecentReport[] = (activitiesResult.data ?? []).map(
           (activity) => ({
             id: `activity-${activity.id}`,
@@ -310,6 +344,9 @@ export default function ReportsPage() {
               activity.kind === 'DOWNLOAD'
                 ? 'Download realizado'
                 : 'Arquivo importado',
+            author:
+              profileNames.get(activity.profile_id ?? '') ??
+              'Usuário não identificado',
             occurredAt: activity.occurred_at,
           }),
         );
@@ -321,6 +358,9 @@ export default function ReportsPage() {
                 ? 'Compilado completo da empresa'
                 : report.report_type,
             detail: `${report.format} · ${report.status}`,
+            author:
+              profileNames.get(report.requested_by ?? '') ??
+              'Usuário não identificado',
             occurredAt: report.created_at,
           }),
         );
@@ -712,7 +752,7 @@ export default function ReportsPage() {
               </small>
             </div>
             <label className={styles.clientFilter}>
-              Pessoa / cliente
+              Cliente ou empresa
               <select
                 aria-label="Filtrar arquivos por pessoa"
                 value={importedClientFilter}
@@ -724,12 +764,13 @@ export default function ReportsPage() {
                 {importedFiles
                   .filter(
                     (file, index, files) =>
-                      files.findIndex((item) => item.person === file.person) ===
-                      index,
+                      files.findIndex(
+                        (item) => item.companyId === file.companyId,
+                      ) === index,
                   )
                   .map((file) => (
-                    <option value={file.person} key={file.person}>
-                      {file.person} · {file.company}
+                    <option value={file.companyId} key={file.companyId}>
+                      {file.company}
                     </option>
                   ))}
               </select>
@@ -789,23 +830,45 @@ export default function ReportsPage() {
           <div className={styles.title}>
             <div>
               <b>Relatórios recentes</b>
-              <small>Downloads e gerações ficam registrados.</small>
+              <small>Veja quem realizou cada ação e filtre pelo período.</small>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowFullReportAudit((current) => !current)}
-            >
-              {showFullReportAudit ? 'Mostrar menos' : 'Ver auditoria'}
-            </button>
+            <div className={styles.reportFilters}>
+              <label>
+                De
+                <input
+                  type="date"
+                  value={reportDateFrom}
+                  onChange={(event) => setReportDateFrom(event.target.value)}
+                />
+              </label>
+              <label>
+                Até
+                <input
+                  type="date"
+                  value={reportDateTo}
+                  onChange={(event) => setReportDateTo(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowFullReportAudit((current) => !current)}
+              >
+                {showFullReportAudit ? 'Mostrar menos' : 'Ver auditoria'}
+              </button>
+            </div>
           </div>
-          {recentReports.length ? (
+          {visibleRecentReports.length ? (
             <div className={styles.importedFileScroller}>
-              {recentReports
+              {visibleRecentReports
                 .slice(0, showFullReportAudit ? 30 : 5)
                 .map((report) => (
-                  <div className={styles.row} key={report.id}>
+                  <div
+                    className={`${styles.row} ${styles.recentReportRow}`}
+                    key={report.id}
+                  >
                     <b>{report.title}</b>
                     <span>{report.detail}</span>
+                    <span>{report.author}</span>
                     <span>
                       {new Date(report.occurredAt).toLocaleString('pt-BR')}
                     </span>
@@ -813,7 +876,7 @@ export default function ReportsPage() {
                 ))}
             </div>
           ) : (
-            <p>Nenhum relatório foi gerado ainda.</p>
+            <p>Nenhum relatório foi encontrado no período selecionado.</p>
           )}
         </section>
       </section>

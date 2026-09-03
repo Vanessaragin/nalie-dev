@@ -281,6 +281,7 @@ export default function CrmPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('Resumo');
   const [search, setSearch] = useState('');
+  const [activitySearch, setActivitySearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [paymentFilter, setPaymentFilter] = useState('Todos');
   const [pendingFilter, setPendingFilter] = useState('Todos');
@@ -1245,22 +1246,55 @@ export default function CrmPage() {
               <h2>Fluxo de atividades</h2>
               <p>Conclua uma atividade ou mova para a próxima etapa.</p>
             </div>
-            <button
-              onClick={() => {
-                setFormError('');
-                setEditingActivityId(null);
-                setModal('action');
-              }}
-            >
-              ＋ Nova atividade
-            </button>
+            <div className={styles.workflowTools}>
+              <label>
+                Buscar atividade
+                <input
+                  type="search"
+                  value={activitySearch}
+                  onChange={(event) => setActivitySearch(event.target.value)}
+                  placeholder="Atividade, cliente ou responsável"
+                />
+              </label>
+              <button
+                onClick={() => {
+                  setFormError('');
+                  setEditingActivityId(null);
+                  setModal('action');
+                }}
+              >
+                ＋ Nova atividade
+              </button>
+            </div>
           </div>
           {workflowStages.map((stage) => {
-            const actions = data.nextActions.filter(
-              (action) =>
-                (activityStages[action.id] ??
-                  (action.completed ? 'Concluído' : 'A fazer')) === stage,
-            );
+            const normalizedActivitySearch = activitySearch
+              .trim()
+              .toLowerCase();
+            const actions = data.nextActions.filter((action) => {
+              const currentStage =
+                activityStages[action.id] ??
+                (action.completed ? 'Concluído' : 'A fazer');
+              const client = data.clients.find(
+                (item) => item.id === action.clientId,
+              );
+              const haystack = [
+                action.title,
+                action.owner,
+                action.priority,
+                currentStage,
+                client?.name,
+                client?.company,
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+              return (
+                currentStage === stage &&
+                (!normalizedActivitySearch ||
+                  haystack.includes(normalizedActivitySearch))
+              );
+            });
             return (
               <section className={styles.workflowGroup} key={stage}>
                 <header>
