@@ -246,6 +246,12 @@
   padding: 18px;
   background: #fffafb;
 }
+.upcomingScroller {
+  max-height: 520px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
 .messages p {
   width: fit-content;
   max-width: 70%;

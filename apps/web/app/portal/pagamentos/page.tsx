@@ -677,79 +677,84 @@ export default function PaymentsPage() {
               </div>
             </form>
           )}
-          <div className={styles.tableHead}>
-            <span>Cliente</span>
-            <span>Serviço / plano</span>
-            <span>Vencimento</span>
-            <span>Valor</span>
-            <span>Situação</span>
-            <span>Ações</span>
-          </div>
-          {filteredPayments.map((payment) => {
-            const index = payments.indexOf(payment);
-            return (
-              <div
-                className={styles.row}
-                key={`${payment.client}-${payment.due}`}
-              >
-                <b>{payment.client}</b>
-                <span>{payment.plan}</span>
-                <span>
-                  {new Date(`${payment.due}T12:00:00`).toLocaleDateString(
-                    'pt-BR',
-                  )}
-                </span>
-                <strong>{money.format(payment.value)}</strong>
-                <em
-                  className={
-                    styles[
-                      payment.status === 'Pago' || payment.status === 'Recebido'
-                        ? 'paid'
-                        : payment.status === 'Atrasado'
-                          ? 'late'
-                          : 'pending'
-                    ]
-                  }
+          <div className={styles.paymentScroller}>
+            <div className={styles.tableHead}>
+              <span>Cliente</span>
+              <span>Serviço / plano</span>
+              <span>Vencimento</span>
+              <span>Valor</span>
+              <span>Situação</span>
+              <span>Ações</span>
+            </div>
+            {filteredPayments.map((payment) => {
+              const index = payments.indexOf(payment);
+              return (
+                <div
+                  className={styles.row}
+                  key={`${payment.client}-${payment.due}`}
                 >
-                  {payment.status}
-                </em>
-                <div>
-                  {payment.receiptPath && (
-                    <button onClick={() => void openReceipt(payment)}>
-                      Ver comprovante
-                    </button>
-                  )}
-                  <button onClick={() => void markPaid(index)}>
-                    Marcar como pago
-                  </button>
-                  <button onClick={() => setEditor({ index, series: false })}>
-                    Editar esta
-                  </button>
-                  <button onClick={() => setEditor({ index, series: true })}>
-                    Editar série
-                  </button>
-                  <button aria-label={`Enviar cobrança para ${payment.client}`}>
-                    WhatsApp
-                  </button>
-                  <button
+                  <b>{payment.client}</b>
+                  <span>{payment.plan}</span>
+                  <span>
+                    {new Date(`${payment.due}T12:00:00`).toLocaleDateString(
+                      'pt-BR',
+                    )}
+                  </span>
+                  <strong>{money.format(payment.value)}</strong>
+                  <em
                     className={
-                      payment.importsBlocked ? styles.unlock : styles.block
+                      styles[
+                        payment.status === 'Pago' ||
+                        payment.status === 'Recebido'
+                          ? 'paid'
+                          : payment.status === 'Atrasado'
+                            ? 'late'
+                            : 'pending'
+                      ]
                     }
-                    onClick={() => void toggleImports(index)}
                   >
+                    {payment.status}
+                  </em>
+                  <div>
+                    {payment.receiptPath && (
+                      <button onClick={() => void openReceipt(payment)}>
+                        Ver comprovante
+                      </button>
+                    )}
+                    <button onClick={() => void markPaid(index)}>
+                      Marcar como pago
+                    </button>
+                    <button onClick={() => setEditor({ index, series: false })}>
+                      Editar esta
+                    </button>
+                    <button onClick={() => setEditor({ index, series: true })}>
+                      Editar série
+                    </button>
+                    <button
+                      aria-label={`Enviar cobrança para ${payment.client}`}
+                    >
+                      WhatsApp
+                    </button>
+                    <button
+                      className={
+                        payment.importsBlocked ? styles.unlock : styles.block
+                      }
+                      onClick={() => void toggleImports(index)}
+                    >
+                      {payment.importsBlocked
+                        ? 'Liberar importações'
+                        : 'Bloquear importações'}
+                    </button>
+                  </div>
+                  <small className={styles.companyAccess}>
                     {payment.importsBlocked
-                      ? 'Liberar importações'
-                      : 'Bloquear importações'}
-                  </button>
+                      ? 'Importações bloqueadas · afeta os 2 usuários'
+                      : 'Importações liberadas para a empresa'}
+                  </small>
                 </div>
-                <small className={styles.companyAccess}>
-                  {payment.importsBlocked
-                    ? 'Importações bloqueadas · afeta os 2 usuários'
-                    : 'Importações liberadas para a empresa'}
-                </small>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
           {filteredPayments.length === 0 && (
             <p className={styles.emptyState}>
               Nenhuma cobrança encontrada neste cliente e período.

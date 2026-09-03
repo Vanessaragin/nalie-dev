@@ -83,6 +83,7 @@ export default function AdminPage() {
   const [resetWhatsappLink, setResetWhatsappLink] = useState('');
   const [activityFeedback, setActivityFeedback] = useState('');
   const [auditActivities, setAuditActivities] = useState<AuditActivity[]>([]);
+  const [auditCompanyFilter, setAuditCompanyFilter] = useState('Todos');
   const [inviteSent, setInviteSent] = useState(false);
   const [businessArea, setBusinessArea] = useState('personal');
   const [entityType, setEntityType] = useState('personal');
@@ -92,6 +93,20 @@ export default function AdminPage() {
   const [userPages, setUserPages] = useState<string[]>([
     ...limitedPagePermissions,
   ]);
+
+  const auditCompanies = Array.from(
+    new Map(
+      auditActivities.map((activity) => [
+        activity.company_id,
+        activity.company?.display_name ?? activity.company_id,
+      ]),
+    ),
+  );
+  const filteredAuditActivities = auditActivities.filter(
+    (activity) =>
+      auditCompanyFilter === 'Todos' ||
+      activity.company_id === auditCompanyFilter,
+  );
 
   useEffect(() => {
     async function loadCompanyUsers() {
@@ -237,7 +252,7 @@ export default function AdminPage() {
   function exportCrmActivities() {
     const csv = [
       'tipo;atividade;empresa;data;detalhes',
-      ...auditActivities.map((activity) =>
+      ...filteredAuditActivities.map((activity) =>
         [
           activity.kind,
           activity.title,
@@ -771,16 +786,34 @@ export default function AdminPage() {
                   Histórico centralizado de todas as ações relevantes.
                 </small>
               </div>
-              <button onClick={exportCrmActivities}>Exportar CRM ↓</button>
+              <div className={styles.auditTools}>
+                <label className={styles.auditFilter}>
+                  Filtrar por empresa
+                  <select
+                    value={auditCompanyFilter}
+                    onChange={(event) =>
+                      setAuditCompanyFilter(event.target.value)
+                    }
+                  >
+                    <option value="Todos">Todas as empresas</option>
+                    {auditCompanies.map(([id, name]) => (
+                      <option key={id} value={id}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button onClick={exportCrmActivities}>Exportar CRM ↓</button>
+              </div>
             </div>
             {activityFeedback && (
               <p className={styles.activityFeedback} role="status">
                 {activityFeedback}
               </p>
             )}
-            {auditActivities.length ? (
+            {filteredAuditActivities.length ? (
               <ul className={styles.activity}>
-                {auditActivities.map((activity) => (
+                {filteredAuditActivities.map((activity) => (
                   <li key={activity.id}>
                     <span>
                       {activity.kind === 'LOGIN'

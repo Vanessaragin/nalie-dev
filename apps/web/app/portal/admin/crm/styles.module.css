@@ -173,7 +173,12 @@
 }
 .workflowGroup {
   margin-top: 18px;
-  overflow-x: auto;
+}
+.activityScroller {
+  max-height: 360px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .workflowGroup > header {
   display: flex;
@@ -760,6 +765,9 @@
   font-weight: 700;
 }
 .historyTable {
+  max-height: 520px;
+  overflow: auto;
+  scrollbar-gutter: stable;
   overflow-x: auto;
   border: 1px solid #e6a5b8;
   border-radius: 10px;

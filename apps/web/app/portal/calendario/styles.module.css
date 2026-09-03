@@ -287,6 +287,12 @@
   padding: 20px;
   min-width: 0;
 }
+.upcomingScroller {
+  max-height: 560px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
 .calendarTitle {
   display: flex;
   justify-content: space-between;

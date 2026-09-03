@@ -735,14 +735,16 @@ export default function AnalysisWorkspacePage() {
             {history.length === 0 && (
               <p>Nenhum histórico analítico cadastrado.</p>
             )}
-            {history.map((row) => (
-              <div className={styles.historyRow} key={row.join('-')}>
-                <time>{row[0]}</time>
-                <b>{row[1]}</b>
-                <span>{row[2]}</span>
-                <small>{row[3]}</small>
-              </div>
-            ))}
+            <div className={styles.historyScroller}>
+              {history.map((row) => (
+                <div className={styles.historyRow} key={row.join('-')}>
+                  <time>{row[0]}</time>
+                  <b>{row[1]}</b>
+                  <span>{row[2]}</span>
+                  <small>{row[3]}</small>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

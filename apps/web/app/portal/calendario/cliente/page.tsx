@@ -331,41 +331,43 @@ export default function ClientCalendarPage() {
               <b>Próximos compromissos</b>
               <small>Todos os eventos desta empresa</small>
             </div>
-            {visibleEvents.map((item) => (
-              <article key={`${item.day}-${item.title}`}>
-                <time>
-                  {new Date(`${item.date}T12:00:00`).toLocaleDateString(
-                    'pt-BR',
-                    {
-                      day: '2-digit',
-                      month: 'short',
-                    },
-                  )}
-                  <br />
-                  {item.time}
-                </time>
-                <p>
-                  <b>{item.title}</b>
-                  <small>{item.type}</small>
-                  <small>{item.reminder}</small>
-                </p>
-                <a
-                  className={styles.googleCalendar}
-                  href={googleCalendarUrl(
-                    item.day,
-                    item.time,
-                    item.title,
-                    item.type,
-                  )}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={`Adicionar ao Google Agenda: ${item.title}`}
-                  title="Adicionar ao Google Agenda"
-                >
-                  <b>G</b>
-                </a>
-              </article>
-            ))}
+            <div className={styles.upcomingScroller}>
+              {visibleEvents.map((item) => (
+                <article key={`${item.day}-${item.title}`}>
+                  <time>
+                    {new Date(`${item.date}T12:00:00`).toLocaleDateString(
+                      'pt-BR',
+                      {
+                        day: '2-digit',
+                        month: 'short',
+                      },
+                    )}
+                    <br />
+                    {item.time}
+                  </time>
+                  <p>
+                    <b>{item.title}</b>
+                    <small>{item.type}</small>
+                    <small>{item.reminder}</small>
+                  </p>
+                  <a
+                    className={styles.googleCalendar}
+                    href={googleCalendarUrl(
+                      item.day,
+                      item.time,
+                      item.title,
+                      item.type,
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Adicionar ao Google Agenda: ${item.title}`}
+                    title="Adicionar ao Google Agenda"
+                  >
+                    <b>G</b>
+                  </a>
+                </article>
+              ))}
+            </div>
           </aside>
         </section>
       </section>

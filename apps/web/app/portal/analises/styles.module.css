@@ -342,6 +342,12 @@
   min-height: 57px;
   border-top: 1px solid #e6a5b8;
 }
+.historyScroller {
+  max-height: 520px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
 .historyRow time,
 .historyRow small {
   color: #7c4b5e;

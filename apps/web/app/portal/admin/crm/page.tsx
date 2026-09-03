@@ -1267,127 +1267,133 @@ export default function CrmPage() {
                   <strong>{stage}</strong>
                   <span>{actions.length}</span>
                 </header>
-                <div className={styles.activityHeader} aria-hidden="true">
-                  <span>Atividade</span>
-                  <span>Cliente</span>
-                  <span>Responsável</span>
-                  <span>Prazo</span>
-                  <span>Prioridade</span>
-                  <span>Etapa</span>
-                </div>
-                {actions.map((action) => {
-                  const administrative =
-                    action.clientId === administratorClientId;
-                  const client = administrative
-                    ? undefined
-                    : data.clients.find((item) => item.id === action.clientId);
-                  const index = workflowStages.indexOf(stage);
-                  return (
-                    <div className={styles.activityRow} key={action.id}>
-                      <label className={styles.activityName}>
-                        <input
-                          type="checkbox"
-                          checked={stage === 'Concluído'}
-                          onChange={(event) =>
-                            void setActivityStage(
-                              action.id,
-                              event.target.checked ? 'Concluído' : 'A fazer',
-                            )
-                          }
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingActivityId(action.id);
-                            setSelectedId(action.clientId);
-                            setFormError('');
-                            setModal('action');
-                          }}
-                          aria-label={`Editar ${action.title}`}
-                          title="Editar atividade"
-                        >
-                          ✎
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => client && openClient(client)}
-                        >
-                          {action.title}
-                        </button>
-                      </label>
-                      <span>
-                        {administrative
-                          ? 'Administrador'
-                          : (client?.name ?? 'Cliente não encontrado')}
-                        <small>
+                <div className={styles.activityScroller}>
+                  <div className={styles.activityHeader} aria-hidden="true">
+                    <span>Atividade</span>
+                    <span>Cliente</span>
+                    <span>Responsável</span>
+                    <span>Prazo</span>
+                    <span>Prioridade</span>
+                    <span>Etapa</span>
+                  </div>
+                  {actions.map((action) => {
+                    const administrative =
+                      action.clientId === administratorClientId;
+                    const client = administrative
+                      ? undefined
+                      : data.clients.find(
+                          (item) => item.id === action.clientId,
+                        );
+                    const index = workflowStages.indexOf(stage);
+                    return (
+                      <div className={styles.activityRow} key={action.id}>
+                        <label className={styles.activityName}>
+                          <input
+                            type="checkbox"
+                            checked={stage === 'Concluído'}
+                            onChange={(event) =>
+                              void setActivityStage(
+                                action.id,
+                                event.target.checked ? 'Concluído' : 'A fazer',
+                              )
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingActivityId(action.id);
+                              setSelectedId(action.clientId);
+                              setFormError('');
+                              setModal('action');
+                            }}
+                            aria-label={`Editar ${action.title}`}
+                            title="Editar atividade"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => client && openClient(client)}
+                          >
+                            {action.title}
+                          </button>
+                        </label>
+                        <span>
                           {administrative
-                            ? administratorEmails.join(' · ')
-                            : client?.company || 'Pessoa física'}
-                        </small>
-                      </span>
-                      <span>{action.owner}</span>
-                      <span>{formatDate(action.dueAt)}</span>
-                      <em data-priority={action.priority}>{action.priority}</em>
-                      <div className={styles.stageActions}>
-                        <button
-                          disabled={index === 0}
-                          onClick={() =>
-                            void setActivityStage(
-                              action.id,
-                              workflowStages[index - 1],
-                            )
-                          }
-                          aria-label={`Voltar ${action.title}`}
-                        >
-                          ‹
-                        </button>
-                        <select
-                          aria-label={`Etapa de ${action.title}`}
-                          value={stage}
-                          onChange={(event) =>
-                            void setActivityStage(
-                              action.id,
-                              event.target.value as WorkflowStage,
-                            )
-                          }
-                        >
-                          {workflowStages.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                        <button
-                          disabled={index === workflowStages.length - 1}
-                          onClick={() =>
-                            void setActivityStage(
-                              action.id,
-                              workflowStages[index + 1],
-                            )
-                          }
-                          aria-label={`Avançar ${action.title}`}
-                        >
-                          ›
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.deleteActivity}
-                          disabled={deletingActivityId === action.id}
-                          onClick={() =>
-                            void deleteActivity(action.id, action.title)
-                          }
-                          aria-label={`Apagar ${action.title}`}
-                          title="Apagar atividade"
-                        >
-                          {deletingActivityId === action.id ? '…' : '×'}
-                        </button>
+                            ? 'Administrador'
+                            : (client?.name ?? 'Cliente não encontrado')}
+                          <small>
+                            {administrative
+                              ? administratorEmails.join(' · ')
+                              : client?.company || 'Pessoa física'}
+                          </small>
+                        </span>
+                        <span>{action.owner}</span>
+                        <span>{formatDate(action.dueAt)}</span>
+                        <em data-priority={action.priority}>
+                          {action.priority}
+                        </em>
+                        <div className={styles.stageActions}>
+                          <button
+                            disabled={index === 0}
+                            onClick={() =>
+                              void setActivityStage(
+                                action.id,
+                                workflowStages[index - 1],
+                              )
+                            }
+                            aria-label={`Voltar ${action.title}`}
+                          >
+                            ‹
+                          </button>
+                          <select
+                            aria-label={`Etapa de ${action.title}`}
+                            value={stage}
+                            onChange={(event) =>
+                              void setActivityStage(
+                                action.id,
+                                event.target.value as WorkflowStage,
+                              )
+                            }
+                          >
+                            {workflowStages.map((option) => (
+                              <option key={option}>{option}</option>
+                            ))}
+                          </select>
+                          <button
+                            disabled={index === workflowStages.length - 1}
+                            onClick={() =>
+                              void setActivityStage(
+                                action.id,
+                                workflowStages[index + 1],
+                              )
+                            }
+                            aria-label={`Avançar ${action.title}`}
+                          >
+                            ›
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deleteActivity}
+                            disabled={deletingActivityId === action.id}
+                            onClick={() =>
+                              void deleteActivity(action.id, action.title)
+                            }
+                            aria-label={`Apagar ${action.title}`}
+                            title="Apagar atividade"
+                          >
+                            {deletingActivityId === action.id ? '…' : '×'}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-                {!actions.length && (
-                  <p className={styles.noActivities}>
-                    Nenhuma atividade nesta etapa.
-                  </p>
-                )}
+                    );
+                  })}
+                  {!actions.length && (
+                    <p className={styles.noActivities}>
+                      Nenhuma atividade nesta etapa.
+                    </p>
+                  )}
+                </div>
               </section>
             );
           })}

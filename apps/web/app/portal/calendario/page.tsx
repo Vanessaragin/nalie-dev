@@ -843,107 +843,109 @@ export default function CalendarPage() {
                 </small>
               </div>
             </div>
-            <div className={styles.today}>
-              {selectedDay
-                ? `DIA ${selectedDay} · ${period.split('-').reverse().join('/')}`
-                : en
-                  ? 'ALL UPCOMING APPOINTMENTS'
-                  : 'TODOS OS PRÓXIMOS COMPROMISSOS'}
-            </div>
-            {selectedDay !== null && (
-              <button
-                className={styles.showAllAppointments}
-                onClick={() => setSelectedDay(null)}
-              >
-                Mostrar todos
-              </button>
-            )}
-            {visibleAppointments.map((item) => (
-              <article key={item.id}>
-                <strong>{item.time}</strong>
-                <span className={styles[item.tone]} />
-                <p>
-                  <b>{item.title}</b>
-                  <small>{item.client}</small>
-                  {item.location && <small>Local: {item.location}</small>}
-                  {item.details && <small>Pauta: {item.details}</small>}
-                  <small>Duração: {item.duration} minutos</small>
-                  <small>Recorrência: {item.recurrence}</small>
-                  <small>Lembrete: {item.reminder}</small>
+            <div className={styles.upcomingScroller}>
+              <div className={styles.today}>
+                {selectedDay
+                  ? `DIA ${selectedDay} · ${period.split('-').reverse().join('/')}`
+                  : en
+                    ? 'ALL UPCOMING APPOINTMENTS'
+                    : 'TODOS OS PRÓXIMOS COMPROMISSOS'}
+              </div>
+              {selectedDay !== null && (
+                <button
+                  className={styles.showAllAppointments}
+                  onClick={() => setSelectedDay(null)}
+                >
+                  Mostrar todos
+                </button>
+              )}
+              {visibleAppointments.map((item) => (
+                <article key={item.id}>
+                  <strong>{item.time}</strong>
+                  <span className={styles[item.tone]} />
+                  <p>
+                    <b>{item.title}</b>
+                    <small>{item.client}</small>
+                    {item.location && <small>Local: {item.location}</small>}
+                    {item.details && <small>Pauta: {item.details}</small>}
+                    <small>Duração: {item.duration} minutos</small>
+                    <small>Recorrência: {item.recurrence}</small>
+                    <small>Lembrete: {item.reminder}</small>
+                  </p>
+                  <em className={styles[item.tone]}>{item.priority}</em>
+                  <div className={styles.contactActions}>
+                    <button
+                      type="button"
+                      className={styles.editAppointment}
+                      onClick={() => openAppointmentForm(item)}
+                    >
+                      Editar
+                    </button>
+                    <a
+                      className={styles.whatsapp}
+                      href={item.whatsapp}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`WhatsApp: ${item.title}`}
+                      title="WhatsApp"
+                    >
+                      <Image
+                        src="/whatsapp-icon.png"
+                        alt=""
+                        width={22}
+                        height={22}
+                      />
+                    </a>
+                    <a
+                      className={styles.email}
+                      href={item.email}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`E-mail: ${item.title}`}
+                      title="E-mail"
+                    >
+                      <Image
+                        src="/email-icon.png"
+                        alt=""
+                        width={22}
+                        height={22}
+                      />
+                    </a>
+                    <a
+                      className={styles.googleCalendar}
+                      href={googleCalendarUrl(
+                        item.title,
+                        item.time,
+                        `${item.client} · Prioridade ${item.priority}${item.details ? ` · ${item.details}` : ''}${item.location ? ` · Local: ${item.location}` : ''}`,
+                        String(item.day),
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Adicionar ao Google Agenda: ${item.title}`}
+                      title="Adicionar ao Google Agenda"
+                    >
+                      <b>G</b>
+                    </a>
+                  </div>
+                </article>
+              ))}
+              {visibleAppointments.length === 0 && (
+                <p className={styles.noAppointments}>
+                  Nenhum compromisso corresponde ao cliente, prioridade e dia
+                  selecionados.
                 </p>
-                <em className={styles[item.tone]}>{item.priority}</em>
-                <div className={styles.contactActions}>
-                  <button
-                    type="button"
-                    className={styles.editAppointment}
-                    onClick={() => openAppointmentForm(item)}
-                  >
-                    Editar
-                  </button>
-                  <a
-                    className={styles.whatsapp}
-                    href={item.whatsapp}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`WhatsApp: ${item.title}`}
-                    title="WhatsApp"
-                  >
-                    <Image
-                      src="/whatsapp-icon.png"
-                      alt=""
-                      width={22}
-                      height={22}
-                    />
-                  </a>
-                  <a
-                    className={styles.email}
-                    href={item.email}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`E-mail: ${item.title}`}
-                    title="E-mail"
-                  >
-                    <Image
-                      src="/email-icon.png"
-                      alt=""
-                      width={22}
-                      height={22}
-                    />
-                  </a>
-                  <a
-                    className={styles.googleCalendar}
-                    href={googleCalendarUrl(
-                      item.title,
-                      item.time,
-                      `${item.client} · Prioridade ${item.priority}${item.details ? ` · ${item.details}` : ''}${item.location ? ` · Local: ${item.location}` : ''}`,
-                      String(item.day),
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`Adicionar ao Google Agenda: ${item.title}`}
-                    title="Adicionar ao Google Agenda"
-                  >
-                    <b>G</b>
-                  </a>
-                </div>
-              </article>
-            ))}
-            {visibleAppointments.length === 0 && (
-              <p className={styles.noAppointments}>
-                Nenhum compromisso corresponde ao cliente, prioridade e dia
-                selecionados.
-              </p>
-            )}
-            <div className={styles.suggestion}>
-              <span>✦</span>
-              <p>
-                <b>{en ? 'Suggested agenda' : 'Sugestão de pauta'}</b>
-                <small>
-                  {en
-                    ? 'Revenue, expenses, margin and next actions based on the appointment topic.'
-                    : 'Receita, despesas, margem e próximas ações conforme o tema do compromisso.'}
-                </small>
-              </p>
+              )}
+              <div className={styles.suggestion}>
+                <span>✦</span>
+                <p>
+                  <b>{en ? 'Suggested agenda' : 'Sugestão de pauta'}</b>
+                  <small>
+                    {en
+                      ? 'Revenue, expenses, margin and next actions based on the appointment topic.'
+                      : 'Receita, despesas, margem e próximas ações conforme o tema do compromisso.'}
+                  </small>
+                </p>
+              </div>
             </div>
           </aside>
         </section>

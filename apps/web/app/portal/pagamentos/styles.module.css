@@ -167,7 +167,17 @@
 }
 .payments {
   padding: 22px;
-  overflow-x: auto;
+}
+.paymentScroller {
+  max-height: 520px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.paymentScroller .tableHead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .title {
   display: flex;

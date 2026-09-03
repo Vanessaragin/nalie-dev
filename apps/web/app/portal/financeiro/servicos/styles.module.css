@@ -184,6 +184,16 @@
   gap: 14px;
   padding: 14px 21px;
 }
+.table {
+  max-height: 520px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.tableHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
 .tableHeader {
   background: #ffe7ee;
   color: #7c3450;
