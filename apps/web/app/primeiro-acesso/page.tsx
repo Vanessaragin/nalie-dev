@@ -13,6 +13,10 @@ export default function FirstAccessPage() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [confirmationToken, setConfirmationToken] = useState('');
+  const [confirmationType, setConfirmationType] = useState<
+    'invite' | 'recovery'
+  >('invite');
   const recoveryAttemptStarted = useRef(false);
 
   useEffect(() => {
@@ -27,12 +31,22 @@ export default function FirstAccessPage() {
       const code = currentUrl.searchParams.get('code');
       const tokenHash = currentUrl.searchParams.get('token_hash');
       const linkType = currentUrl.searchParams.get('type');
+      const confirmToken = currentUrl.searchParams.get('confirm_token');
+      const confirmType = currentUrl.searchParams.get('confirm_type');
       // Capture hash credentials before createBrowserClient can consume and
       // remove them from the address bar.
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const accessToken = hash.get('access_token');
       const refreshToken = hash.get('refresh_token');
       try {
+        // The e-mail first opens this neutral screen. Link scanners may load
+        // the page, but only the recipient's explicit button click consumes
+        // the single-use Supabase token.
+        if (confirmToken) {
+          setConfirmationToken(confirmToken);
+          setConfirmationType(confirmType === 'recovery' ? 'recovery' : 'invite');
+          return;
+        }
         const supabase = createClient({ detectSessionInUrl: false });
         // In development React can run this effect twice. The first pass may
         // already have exchanged the one-use recovery token, so always reuse
@@ -89,6 +103,32 @@ export default function FirstAccessPage() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  async function confirmAccess() {
+    if (!confirmationToken) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const supabase = createClient({ detectSessionInUrl: false });
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: confirmationToken,
+        type: confirmationType,
+      });
+      if (error) throw error;
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !data.session)
+        throw sessionError ?? new Error('Sessão ausente.');
+      setConfirmationToken('');
+      setRecoverySession(true);
+      window.history.replaceState(null, '', window.location.pathname);
+    } catch {
+      setMessage(
+        'O link de acesso é inválido ou expirou. Solicite um novo convite.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setMessage('');
@@ -141,9 +181,18 @@ export default function FirstAccessPage() {
             <p className={styles.intro}>
               {recoverySession
                 ? 'Escolha sua senha pessoal para concluir o primeiro acesso.'
+                : confirmationToken
+                  ? 'Confirme abaixo para validar seu convite e criar sua senha.'
                 : 'O acesso para criar a senha deve ser aberto pelo link recebido por e-mail.'}
             </p>
-            {sessionChecked && !recoverySession ? (
+            {confirmationToken ? (
+              <div>
+                <button type="button" disabled={loading} onClick={confirmAccess}>
+                  {loading ? 'Validando…' : 'Continuar e criar minha senha'}
+                </button>
+                {message && <p role="alert">{message}</p>}
+              </div>
+            ) : sessionChecked && !recoverySession ? (
               <div>
                 {message && <p role="alert">{message}</p>}
                 <p>

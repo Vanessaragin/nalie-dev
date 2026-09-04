@@ -89,6 +89,34 @@ describe('FirstAccessPage', () => {
     });
   });
 
+  it('waits for an explicit click before consuming an e-mail invitation', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/primeiro-acesso?confirm_token=convite-protegido&confirm_type=invite',
+    );
+    supabaseMocks.verifyOtp.mockResolvedValue({ error: null });
+    supabaseMocks.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'emily' } } },
+      error: null,
+    });
+
+    render(<FirstAccessPage />);
+
+    const button = await screen.findByRole('button', {
+      name: 'Continuar e criar minha senha',
+    });
+    expect(supabaseMocks.verifyOtp).not.toHaveBeenCalled();
+
+    button.click();
+
+    expect(await screen.findByLabelText('Nova senha')).toBeInTheDocument();
+    expect(supabaseMocks.verifyOtp).toHaveBeenCalledWith({
+      token_hash: 'convite-protegido',
+      type: 'invite',
+    });
+  });
+
   it('reuses an existing recovery session without consuming the token again', async () => {
     window.history.replaceState(
       null,
