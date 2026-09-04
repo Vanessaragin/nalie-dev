@@ -80,7 +80,6 @@ export default function AdminPage() {
     seedUsers.map((user) => user.access),
   );
   const [resetFeedback, setResetFeedback] = useState('');
-  const [resetWhatsappLink, setResetWhatsappLink] = useState('');
   const [activityFeedback, setActivityFeedback] = useState('');
   const [auditActivities, setAuditActivities] = useState<AuditActivity[]>([]);
   const [auditCompanyFilter, setAuditCompanyFilter] = useState('Todos');
@@ -88,7 +87,6 @@ export default function AdminPage() {
   const [businessArea, setBusinessArea] = useState('personal');
   const [entityType, setEntityType] = useState('personal');
   const [resetUser, setResetUser] = useState('');
-  const [resetChannel, setResetChannel] = useState('email');
   const [showProvisioning] = useState(false);
   const [userPages, setUserPages] = useState<string[]>([
     ...limitedPagePermissions,
@@ -349,13 +347,12 @@ export default function AdminPage() {
   }
 
   async function requestPasswordReset() {
-    setResetWhatsappLink('');
     const selectedUser = users.find(
       (user) => resetUserLabel(user) === resetUser,
     );
     if (!selectedUser?.membershipId) {
       setResetFeedback(
-        `Reset preparado para ${resetUser} por ${resetChannel === 'both' ? 'e-mail e WhatsApp' : resetChannel === 'whatsapp' ? 'WhatsApp' : 'e-mail'}. A solicitação será gravada quando o Supabase estiver conectado.`,
+        `Reset preparado para ${resetUser} por e-mail. A solicitação será gravada quando o Supabase estiver conectado.`,
       );
       return;
     }
@@ -366,17 +363,12 @@ export default function AdminPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           membershipId: selectedUser.membershipId,
-          channel: resetChannel,
         }),
       });
-      const result = (await response.json()) as {
-        error?: string;
-        whatsappLink?: string;
-      };
+      const result = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(result.error);
-      setResetWhatsappLink(result.whatsappLink ?? '');
       setResetFeedback(
-        `Reset solicitado para ${resetUser} por ${resetChannel === 'both' ? 'e-mail e WhatsApp' : resetChannel === 'whatsapp' ? 'WhatsApp' : 'e-mail'}. O link expira em 48 horas.`,
+        `Reset solicitado para ${resetUser} por e-mail. O link expira em 60 minutos.`,
       );
     } catch {
       setResetFeedback(
@@ -733,18 +725,7 @@ export default function AdminPage() {
                   ))}
                 </select>
               </label>
-              <label>
-                Enviar instruções por
-                <select
-                  aria-label="Canal para envio da nova senha"
-                  value={resetChannel}
-                  onChange={(event) => setResetChannel(event.target.value)}
-                >
-                  <option value="email">E-mail</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="both">E-mail e WhatsApp</option>
-                </select>
-              </label>
+              <p>As instruções serão enviadas para o e-mail cadastrado.</p>
               <button onClick={() => void requestPasswordReset()}>
                 Solicitar reset de senha
               </button>
@@ -752,7 +733,7 @@ export default function AdminPage() {
             <ul className={styles.passwordRules}>
               <li>Troca obrigatória no próximo acesso</li>
               <li>Nova senha solicitada a cada 90 dias</li>
-              <li>O link provisório expira em 48 horas</li>
+              <li>O link provisório expira em 60 minutos</li>
               <li>A senha definitiva nunca fica visível</li>
             </ul>
             {resetFeedback && (
@@ -760,19 +741,6 @@ export default function AdminPage() {
                 {resetFeedback} O usuário deverá criar uma nova senha na tela de
                 primeiro acesso.
               </p>
-            )}
-            {resetWhatsappLink && (
-              <button
-                className={styles.copyResetLink}
-                onClick={() => {
-                  void navigator.clipboard.writeText(resetWhatsappLink);
-                  setResetFeedback(
-                    'Link seguro copiado. Envie ao usuário pelo WhatsApp.',
-                  );
-                }}
-              >
-                Copiar link seguro para WhatsApp
-              </button>
             )}
           </article>
         </section>

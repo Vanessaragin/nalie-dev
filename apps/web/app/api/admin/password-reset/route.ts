@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 
 type ResetBody = {
   membershipId?: string;
-  channel?: 'email' | 'whatsapp' | 'both';
 };
 
 export async function POST(request: Request) {
@@ -22,11 +21,7 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as ResetBody;
-  if (
-    !body.membershipId ||
-    !body.channel ||
-    !['email', 'whatsapp', 'both'].includes(body.channel)
-  ) {
+  if (!body.membershipId) {
     return NextResponse.json(
       { error: 'Solicitação inválida.' },
       { status: 400 },
@@ -84,54 +79,35 @@ export async function POST(request: Request) {
     process.env.NALIE_PUBLIC_URL || 'https://naliebi.onrender.com'
   ).replace(/\/$/, '');
   const redirectTo = `${origin}/primeiro-acesso?mode=recovery`;
-  let whatsappLink: string | undefined;
-
-  if (body.channel === 'email' || body.channel === 'both') {
-    // The authenticated SSR client uses PKCE and stores its verifier in the
-    // administrator's browser cookies. The recipient opens the e-mail in a
-    // different browser, so that verifier is unavailable. Recovery e-mails
-    // must therefore use the implicit flow, whose session is delivered in the
-    // redirect hash and consumed by the first-access page.
-    const recoveryClient = createClient(url, publishableKey, {
-      auth: {
-        flowType: 'implicit',
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-    const { error } = await recoveryClient.auth.resetPasswordForEmail(email, {
-      redirectTo,
-    });
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 502 });
-    }
-  }
-
-  if (body.channel === 'whatsapp' || body.channel === 'both') {
-    const { data, error } = await adminClient.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo },
-    });
-    if (error || !data.properties?.action_link) {
-      return NextResponse.json(
-        { error: error?.message ?? 'Não foi possível gerar o link.' },
-        { status: 502 },
-      );
-    }
-    whatsappLink = data.properties.action_link;
+  // The authenticated SSR client uses PKCE and stores its verifier in the
+  // administrator's browser cookies. The recipient opens the e-mail in a
+  // different browser, so that verifier is unavailable. Recovery e-mails
+  // must therefore use the implicit flow, whose session is delivered in the
+  // redirect hash and consumed by the first-access page.
+  const recoveryClient = createClient(url, publishableKey, {
+    auth: {
+      flowType: 'implicit',
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+  const { error } = await recoveryClient.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 502 });
   }
 
   const { error: requestError } = await authenticatedClient.rpc(
     'request_company_user_password_reset',
     {
       target_membership_id: body.membershipId,
-      requested_channel: body.channel,
+      requested_channel: 'email',
     },
   );
   if (requestError) {
     return NextResponse.json({ error: requestError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, whatsappLink });
+  return NextResponse.json({ ok: true });
 }

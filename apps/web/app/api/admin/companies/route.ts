@@ -7,7 +7,12 @@ import {
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
-type ProvisionUser = { name?: string; email?: string };
+type ProvisionUser = {
+  id?: string;
+  membershipId?: string;
+  name?: string;
+  email?: string;
+};
 type CompanyBody = {
   companyId?: string;
   provisionAccess?: boolean;
@@ -81,6 +86,8 @@ export async function POST(request: Request) {
   const provisionAccess = body.provisionAccess === true;
   const users = (body.users ?? [])
     .map((user) => ({
+      id: user.id?.trim() || undefined,
+      membershipId: user.membershipId?.trim() || undefined,
       name: user.name?.trim() ?? '',
       email: user.email?.trim().toLowerCase() ?? '',
     }))
@@ -213,6 +220,53 @@ export async function POST(request: Request) {
     }
 
     if (!companyId) throw new Error('Não foi possível identificar o contato.');
+
+    if (existingCompanyId) {
+      for (const user of users.filter(
+        (candidate) => candidate.id && candidate.membershipId,
+      )) {
+        const { data: membership, error: membershipError } = await adminClient
+          .from('company_users')
+          .select('id, profile_id')
+          .eq('id', user.membershipId!)
+          .eq('profile_id', user.id!)
+          .eq('company_id', companyId)
+          .single();
+        if (membershipError || !membership)
+          throw new Error('Usuário vinculado ao cliente não encontrado.');
+
+        const emailOwner = await findUserByEmail(adminClient, user.email);
+        if (emailOwner && emailOwner.id !== user.id)
+          throw new Error(`${user.email} já pertence a outro usuário.`);
+
+        const { data: currentUser, error: currentUserError } =
+          await adminClient.auth.admin.getUserById(user.id!);
+        if (currentUserError || !currentUser.user)
+          throw new Error('Usuário de acesso não encontrado.');
+
+        const { error: authUpdateError } =
+          await adminClient.auth.admin.updateUserById(user.id!, {
+            email: user.email,
+            email_confirm: true,
+            user_metadata: {
+              ...currentUser.user.user_metadata,
+              full_name: user.name,
+              company_id: companyId,
+            },
+          });
+        if (authUpdateError) throw authUpdateError;
+
+        const { error: profileUpdateError } = await adminClient
+          .from('profiles')
+          .update({
+            display_name: user.name,
+            full_name: user.name,
+            public_email: user.email,
+          })
+          .eq('id', user.id!);
+        if (profileUpdateError) throw profileUpdateError;
+      }
+    }
 
     let memberships: Array<{ id: string; profile_id: string }> = [];
     const provisioned: Array<{ user: User; invitationSent: boolean }> = [];

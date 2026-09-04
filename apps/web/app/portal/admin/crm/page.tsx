@@ -817,10 +817,14 @@ export default function CrmPage() {
             owner: String(form.get('owner')),
             users: [
               {
+                id: portalUsers?.[0]?.id,
+                membershipId: portalUsers?.[0]?.membershipId,
                 name: String(form.get('name')),
                 email: String(form.get('email')),
               },
               {
+                id: portalUsers?.[1]?.id,
+                membershipId: portalUsers?.[1]?.membershipId,
                 name: String(form.get('user2Name') ?? ''),
                 email: String(form.get('user2Email') ?? ''),
               },
