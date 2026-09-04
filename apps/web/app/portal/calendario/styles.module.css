@@ -427,38 +427,72 @@
   color: #7c4b5e;
   font-weight: 800;
 }
-.upcoming > article {
+.upcomingRow {
   display: grid;
-  grid-template-columns: 40px 8px 1fr auto auto;
-  gap: 9px;
+  grid-template-columns: 48px 8px minmax(0, 1fr) auto auto;
+  gap: 12px;
   align-items: center;
-  padding: 13px 0;
+  min-width: 0;
+  padding: 10px 0;
   border-bottom: 1px solid #ffe7ee;
 }
-.upcoming article > strong {
+.upcomingRow > strong {
   font-size: 9px;
 }
-.upcoming article > span {
+.upcomingRow > span {
   width: 7px;
   height: 7px;
   border-radius: 50%;
 }
-.upcoming article p {
+.appointmentDetails,
+.appointmentMain,
+.appointmentMeta {
+  min-width: 0;
+}
+.upcomingRow p {
   margin: 0;
 }
-.upcoming article p b,
-.upcoming article p small {
-  display: block;
+.appointmentDetails {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(260px, 1.5fr);
+  align-items: center;
+  gap: 12px;
 }
-.upcoming article p b {
+.appointmentMain b,
+.appointmentMain small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.appointmentMain b {
   font-size: 8.5px;
 }
-.upcoming article p small {
+.appointmentMain small,
+.appointmentMeta small {
   font-size: 7px;
   color: #7c4b5e;
-  margin-top: 4px;
 }
-.upcoming article > em {
+.appointmentMain small {
+  margin-top: 3px;
+}
+.appointmentMeta {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.appointmentMeta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.appointmentMeta small + small::before {
+  content: '·';
+  margin: 0 6px;
+  color: #d88aa3;
+}
+.upcomingRow > em {
   font-style: normal;
   font-size: 6.5px;
   padding: 5px 7px;
@@ -704,19 +738,20 @@
   font-size: 11px;
 }
 .content .days button span,
-.content .upcoming article > strong,
-.content .upcoming article p small,
+.content .upcomingRow > strong,
+.content .appointmentMain small,
+.content .appointmentMeta small,
 .content .suggestion small,
 .content .messages button small,
 .content .chatHeader small {
   font-size: 12px;
 }
 .content .days button i,
-.content .upcoming article > em {
+.content .upcomingRow > em {
   font-size: 10px;
 }
 .content .title b,
-.content .upcoming article p b,
+.content .appointmentMain b,
 .content .suggestion b,
 .content .messages button b,
 .content .chatHeader b {
@@ -760,5 +795,25 @@
   }
   .days button i {
     display: none;
+  }
+  .upcomingRow {
+    grid-template-columns: 42px 7px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .appointmentDetails {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .appointmentMeta {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .upcomingRow > em {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .contactActions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
   }
 }

@@ -860,18 +860,30 @@ export default function CalendarPage() {
                 </button>
               )}
               {visibleAppointments.map((item) => (
-                <article key={item.id}>
+                <article className={styles.upcomingRow} key={item.id}>
                   <strong>{item.time}</strong>
                   <span className={styles[item.tone]} />
-                  <p>
-                    <b>{item.title}</b>
-                    <small>{item.client}</small>
-                    {item.location && <small>Local: {item.location}</small>}
-                    {item.details && <small>Pauta: {item.details}</small>}
-                    <small>Duração: {item.duration} minutos</small>
-                    <small>Recorrência: {item.recurrence}</small>
-                    <small>Lembrete: {item.reminder}</small>
-                  </p>
+                  <div className={styles.appointmentDetails}>
+                    <p className={styles.appointmentMain}>
+                      <b>{item.title}</b>
+                      <small>{item.client}</small>
+                    </p>
+                    <p className={styles.appointmentMeta}>
+                      <small>{item.duration} min</small>
+                      <small>{item.recurrence}</small>
+                      <small>{item.reminder}</small>
+                      {item.location && (
+                        <small title={item.location}>
+                          Local: {item.location}
+                        </small>
+                      )}
+                      {item.details && (
+                        <small title={item.details}>
+                          Pauta: {item.details}
+                        </small>
+                      )}
+                    </p>
+                  </div>
                   <em className={styles[item.tone]}>{item.priority}</em>
                   <div className={styles.contactActions}>
                     <button
