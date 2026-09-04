@@ -16,6 +16,10 @@ type CompanyOption = {
   active_users: number;
 };
 
+let rememberedAdministratorName = '';
+let rememberedCompanies: CompanyOption[] = [];
+let rememberedSelectedId = '';
+
 function readStoredValue(key: string) {
   if (typeof window === 'undefined') return '';
   const storage = window.localStorage;
@@ -25,9 +29,12 @@ function readStoredValue(key: string) {
 }
 
 export default function CompanySwitcher({ className }: { className: string }) {
-  const [companies, setCompanies] = useState<CompanyOption[]>([]);
-  const [selectedId, setSelectedId] = useState('');
-  const [administratorName, setAdministratorName] = useState('');
+  const [companies, setCompanies] =
+    useState<CompanyOption[]>(rememberedCompanies);
+  const [selectedId, setSelectedId] = useState(rememberedSelectedId);
+  const [administratorName, setAdministratorName] = useState(
+    rememberedAdministratorName,
+  );
   const [identityLoaded, setIdentityLoaded] = useState(false);
 
   useEffect(() => {
@@ -38,10 +45,17 @@ export default function CompanySwitcher({ className }: { className: string }) {
     queueMicrotask(() => {
       if (cachedAdministratorName)
         setAdministratorName(cachedAdministratorName);
-      if (cachedSelectedId) setSelectedId(cachedSelectedId);
+      if (cachedAdministratorName)
+        rememberedAdministratorName = cachedAdministratorName;
+      if (cachedSelectedId) {
+        setSelectedId(cachedSelectedId);
+        rememberedSelectedId = cachedSelectedId;
+      }
       if (cachedCompany) {
         try {
-          setCompanies([JSON.parse(cachedCompany) as CompanyOption]);
+          const parsedCompany = JSON.parse(cachedCompany) as CompanyOption;
+          setCompanies([parsedCompany]);
+          rememberedCompanies = [parsedCompany];
         } catch {
           storage.removeItem(ACCOUNT_COMPANY_KEY);
         }
@@ -68,10 +82,12 @@ export default function CompanySwitcher({ className }: { className: string }) {
               'Administrador',
           );
           setAdministratorName(currentAdministratorName);
+          rememberedAdministratorName = currentAdministratorName;
           if (typeof storage?.setItem === 'function')
             storage.setItem(ADMINISTRATOR_NAME_KEY, currentAdministratorName);
-        } else {
+        } else if (authData.user) {
           setAdministratorName('');
+          rememberedAdministratorName = '';
           if (typeof storage?.removeItem === 'function')
             storage.removeItem(ADMINISTRATOR_NAME_KEY);
         }
@@ -82,41 +98,51 @@ export default function CompanySwitcher({ className }: { className: string }) {
           .order('display_name');
         if (error) throw error;
         const companyRows = data ?? [];
-        const { data: crmRows, error: crmError } = companyRows.length
-          ? await supabase
-              .from('client_crm')
-              .select('company_id,client_status')
-              .in(
-                'company_id',
-                companyRows.map((company) => company.id),
-              )
-          : { data: [], error: null };
+        const { data: crmRows, error: crmError } =
+          isAdministrator && companyRows.length
+            ? await supabase
+                .from('client_crm')
+                .select('company_id,client_status')
+                .in(
+                  'company_id',
+                  companyRows.map((company) => company.id),
+                )
+            : { data: [], error: null };
         if (crmError) throw crmError;
         const contractedCompanyIds = new Set(
           (crmRows ?? [])
             .filter((row) => row.client_status !== 'Não contratado')
             .map((row) => row.company_id),
         );
+        const visibleCompanyRows = isAdministrator
+          ? companyRows.filter((company) =>
+              contractedCompanyIds.has(company.id),
+            )
+          : companyRows;
         const loaded = await Promise.all(
-          companyRows
-            .filter((company) => contractedCompanyIds.has(company.id))
-            .map(async (company) => {
-              const { data: count } = await supabase.rpc(
-                'active_company_user_count',
-                { target_company_id: company.id },
-              );
-              return { ...company, active_users: Number(count ?? 0) };
-            }),
+          visibleCompanyRows.map(async (company) => {
+            const { data: count } = await supabase.rpc(
+              'active_company_user_count',
+              { target_company_id: company.id },
+            );
+            return { ...company, active_users: Number(count ?? 0) };
+          }),
         );
-        setCompanies(loaded);
+        if (loaded.length > 0) {
+          setCompanies(loaded);
+          rememberedCompanies = loaded;
+        }
         const stored =
           typeof storage?.getItem === 'function'
             ? storage.getItem(SELECTED_COMPANY_KEY)
             : null;
         const next = loaded.some((company) => company.id === stored)
           ? String(stored)
-          : (loaded[0]?.id ?? '');
-        setSelectedId(next);
+          : (loaded[0]?.id ?? rememberedSelectedId);
+        if (next) {
+          setSelectedId(next);
+          rememberedSelectedId = next;
+        }
         if (next) {
           const selectedCompany = loaded.find((company) => company.id === next);
           if (typeof storage?.setItem === 'function')
@@ -133,7 +159,7 @@ export default function CompanySwitcher({ className }: { className: string }) {
           );
         }
       } catch {
-        setCompanies([]);
+        // Preserve the last valid identity during transient auth/network errors.
       } finally {
         setIdentityLoaded(true);
       }
