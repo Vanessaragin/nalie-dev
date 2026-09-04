@@ -138,6 +138,10 @@ export async function POST(request: Request) {
   });
   let createdCompanyId: string | undefined;
   const invitedUserIds: string[] = [];
+  const existingMembershipsByProfile = new Map<
+    string,
+    { id: string; profile_id: string }
+  >();
   try {
     const legalDocument = body.legalDocument?.replace(/\D/g, '') ?? '';
     if (!existingCompanyId) {
@@ -172,16 +176,21 @@ export async function POST(request: Request) {
       if (existing) {
         const { data: membership } = await adminClient
           .from('company_users')
-          .select('id')
+          .select('id, company_id, profile_id')
           .eq('profile_id', existing.id)
           .not('company_id', 'is', null)
           .maybeSingle();
-        if (membership) {
+        if (membership && membership.company_id !== existingCompanyId) {
           return NextResponse.json(
             { error: `${user.email} já pertence a outra empresa.` },
             { status: 409 },
           );
         }
+        if (membership)
+          existingMembershipsByProfile.set(existing.id, {
+            id: membership.id,
+            profile_id: membership.profile_id,
+          });
       }
     }
 
@@ -315,21 +324,40 @@ export async function POST(request: Request) {
       );
       if (profileError) throw profileError;
 
-      const { data, error: membershipError } = await adminClient
-        .from('company_users')
-        .insert(
-          provisioned.map(({ user }, index) => ({
-            company_id: companyId,
-            profile_id: user.id,
-            role_id: index === 0 ? roleIds.COMPANY_ADMIN : roleIds.COMPANY_USER,
-            status: 'INVITED',
-            access_level: index === 0 ? 'COMPLETE' : 'LIMITED',
-            full_access: index === 0,
-          })),
-        )
-        .select('id, profile_id');
-      if (membershipError) throw membershipError;
-      memberships = data ?? [];
+      const membershipsToCreate = provisioned
+        .map(({ user }, index) => ({ user, index }))
+        .filter(({ user }) => !existingMembershipsByProfile.has(user.id));
+      let createdMemberships: Array<{ id: string; profile_id: string }> = [];
+      if (membershipsToCreate.length) {
+        const { data, error: membershipError } = await adminClient
+          .from('company_users')
+          .insert(
+            membershipsToCreate.map(({ user, index }) => ({
+              company_id: companyId,
+              profile_id: user.id,
+              role_id:
+                index === 0 ? roleIds.COMPANY_ADMIN : roleIds.COMPANY_USER,
+              status: 'INVITED',
+              access_level: index === 0 ? 'COMPLETE' : 'LIMITED',
+              full_access: index === 0,
+            })),
+          )
+          .select('id, profile_id');
+        if (membershipError) throw membershipError;
+        createdMemberships = data ?? [];
+      }
+      const createdMembershipsByProfile = new Map(
+        createdMemberships.map((membership) => [
+          membership.profile_id,
+          membership,
+        ]),
+      );
+      memberships = provisioned.flatMap(({ user }) => {
+        const membership =
+          existingMembershipsByProfile.get(user.id) ??
+          createdMembershipsByProfile.get(user.id);
+        return membership ? [membership] : [];
+      });
 
       const limitedMembership = memberships[1];
       if (limitedMembership) {
