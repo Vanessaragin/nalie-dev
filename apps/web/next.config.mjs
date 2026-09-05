@@ -1,11 +1,10 @@
-import { loadEnvConfig } from '@next/env';
+import nextEnv from '@next/env';
 import path from 'node:path';
-import type { NextConfig } from 'next';
+
+const { loadEnvConfig } = nextEnv;
 
 // The web workspace runs with apps/web as its working directory, while this
-// monorepo keeps the shared development environment at the repository root.
-// Load it explicitly so browser-safe NEXT_PUBLIC_* values and server-only
-// credentials are available in their correct runtimes.
+// monorepo keeps the shared production environment at the repository root.
 loadEnvConfig(
   path.resolve(process.cwd(), '../..'),
   process.env.NODE_ENV !== 'production',
@@ -13,7 +12,7 @@ loadEnvConfig(
   true,
 );
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   devIndicators: false,
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
   reactStrictMode: true,
