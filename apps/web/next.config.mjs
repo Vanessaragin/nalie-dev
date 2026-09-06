@@ -15,6 +15,7 @@ loadEnvConfig(
 const nextConfig = {
   devIndicators: false,
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
+  output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
   async headers() {
