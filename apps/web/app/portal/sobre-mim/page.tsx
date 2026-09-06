@@ -29,6 +29,11 @@ const profileDefaults = {
     'Organização financeira — Estruturação de dados, contas, categorias e rotinas para uma visão confiável do negócio.\nAnálise e diagnóstico — Leitura dos indicadores, identificação de riscos e oportunidades e orientação para decisões.\nPlanejamento estratégico — Metas, cenários, prioridades e plano de ação acompanhados de forma prática.\nAcompanhamento empresarial — Reuniões periódicas, revisão de resultados e recomendações adaptadas à realidade da empresa.',
 };
 
+function normalizeWhatsAppNumber(value: string) {
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 11 ? `55${digits}` : digits;
+}
+
 export default function AboutPage() {
   const canEdit = useCurrentPagePermissions().includes('super');
   const [data, setData] = useState(profileDefaults);
@@ -65,7 +70,7 @@ export default function AboutPage() {
     ) as typeof profileDefaults;
     const supabase = createClient();
     const { data: authData } = await supabase.auth.getUser();
-    const phone = updated.whatsapp.replace(/\D/g, '');
+    const phone = normalizeWhatsAppNumber(updated.whatsapp);
     const { error } = await supabase
       .from('site_branding')
       .update({
@@ -85,11 +90,7 @@ export default function AboutPage() {
   }
   const services = data.services.split('\n').filter(Boolean);
   const emailUrl = `mailto:${data.email}?subject=${encodeURIComponent('Contato pelo portal Nalie')}`;
-  const phoneDigits = data.whatsapp.replace(/\D/g, '');
-  const whatsappNumber =
-    phoneDigits.length >= 10 && phoneDigits.length <= 11
-      ? `55${phoneDigits}`
-      : phoneDigits;
+  const whatsappNumber = normalizeWhatsAppNumber(data.whatsapp);
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Olá, gostaria de conversar sobre o meu negócio.')}`;
   const instagramHandle = data.linkedin
     .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')

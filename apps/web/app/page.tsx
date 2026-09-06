@@ -41,6 +41,16 @@ const segments = [
   ],
 ];
 
+function normalizeWhatsAppUrl(value: string) {
+  const match = value.match(/^(https:\/\/wa\.me\/)(\d+)(.*)$/i);
+  if (!match) return value;
+
+  const [, prefix, digits, suffix] = match;
+  const normalizedDigits =
+    digits.length >= 10 && digits.length <= 11 ? `55${digits}` : digits;
+  return `${prefix}${normalizedDigits}${suffix}`;
+}
+
 function CashFlowChart() {
   return (
     <svg
@@ -144,7 +154,8 @@ export default function Home() {
         .eq('id', 'nalie-main')
         .single()
         .then(({ data }) => {
-          if (data?.specialist_url) setWhatsAppUrl(data.specialist_url);
+          if (data?.specialist_url)
+            setWhatsAppUrl(normalizeWhatsAppUrl(data.specialist_url));
         });
     } catch {
       // Mantém o link empacotado quando o Supabase não está disponível.
