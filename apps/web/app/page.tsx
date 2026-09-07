@@ -143,7 +143,7 @@ function DonutChart() {
 
 export default function Home() {
   const [whatsAppUrl, setWhatsAppUrl] = useState(
-    'https://wa.me/5511999990020?text=Olá%2C%20gostaria%20de%20conhecer%20melhor%20a%20Nalie.',
+    'https://wa.me/5511947576630?text=Olá%2C%20gostaria%20de%20conhecer%20melhor%20a%20Nalie.',
   );
 
   useEffect(() => {

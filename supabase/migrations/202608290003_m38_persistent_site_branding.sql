@@ -2,7 +2,7 @@ create table if not exists public.site_branding (
   id text primary key check (id = 'nalie-main'),
   profile jsonb not null default '{}'::jsonb check (jsonb_typeof(profile) = 'object'),
   photo_url text not null default '/vanessa-login.jpeg',
-  specialist_url text not null default 'https://wa.me/5511999990020',
+  specialist_url text not null default 'https://wa.me/5511947576630',
   updated_by uuid references auth.users(id),
   updated_at timestamptz not null default now()
 );
