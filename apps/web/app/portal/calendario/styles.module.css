@@ -92,6 +92,11 @@
   background: #f0789c;
   color: #fffafb;
 }
+.appointmentForm > footer .deleteAppointment {
+  margin-right: auto;
+  border-color: #b42318;
+  color: #b42318;
+}
 .editAppointment {
   min-height: 34px;
   padding: 0 11px;

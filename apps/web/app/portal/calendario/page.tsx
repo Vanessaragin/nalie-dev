@@ -181,22 +181,15 @@ export default function CalendarPage() {
         const crmByCompany = new Map(
           (crmResult.data ?? []).map((row) => [row.company_id, row]),
         );
-        const choices = (companiesResult.data ?? [])
-          .filter((company) => {
-            const status = String(
-              crmByCompany.get(company.id)?.client_status ?? 'Não contratado',
-            );
-            return status !== 'Não contratado';
-          })
-          .map((company) => {
-            const crm = crmByCompany.get(company.id);
-            return {
-              id: company.id,
-              label: String(crm?.contact_name || company.display_name),
-              whatsapp: String(crm?.whatsapp || crm?.contact_phone || ''),
-              email: String(crm?.contact_email || ''),
-            };
-          });
+        const choices = (companiesResult.data ?? []).map((company) => {
+          const crm = crmByCompany.get(company.id);
+          return {
+            id: company.id,
+            label: String(crm?.contact_name || company.display_name),
+            whatsapp: String(crm?.whatsapp || crm?.contact_phone || ''),
+            email: String(crm?.contact_email || ''),
+          };
+        });
         const choiceById = new Map(
           choices.map((choice) => [choice.id, choice]),
         );
@@ -421,6 +414,49 @@ export default function CalendarPage() {
     setAppointmentPhone('');
     setAppointmentEmail('');
     setSavingAppointment(false);
+  }
+  async function deleteAppointment() {
+    if (!editingAppointment) return;
+    const recurrenceWarning =
+      editingAppointment.recurrence === 'Não repetir'
+        ? ''
+        : ' e todas as suas recorrências';
+    if (
+      !window.confirm(
+        `Excluir o compromisso “${editingAppointment.title}”${recurrenceWarning}? Esta ação não pode ser desfeita.`,
+      )
+    )
+      return;
+
+    setSavingAppointment(true);
+    setAppointmentNotice('Excluindo compromisso...');
+    try {
+      const supabase = createClient({ detectSessionInUrl: false });
+      const { error } = await supabase
+        .from('calendar_events')
+        .delete()
+        .eq('id', editingAppointment.sourceId);
+      if (error) throw error;
+    } catch (error) {
+      setAppointmentNotice(
+        `Compromisso não excluído: ${error instanceof Error ? error.message : 'o banco recusou a exclusão'}.`,
+      );
+      setSavingAppointment(false);
+      return;
+    }
+
+    setGeneralItems((current) =>
+      current.filter((item) => item.sourceId !== editingAppointment.sourceId),
+    );
+    setPersonalItems((current) =>
+      current.filter((item) => item.sourceId !== editingAppointment.sourceId),
+    );
+    setShowAppointmentForm(false);
+    setEditingAppointment(null);
+    setSavingAppointment(false);
+    setAppointmentNotice(
+      `${editingAppointment.title} foi excluído do calendário.`,
+    );
   }
   function openAppointmentForm(item?: Appointment) {
     setEditingAppointment(item ?? null);
@@ -655,8 +691,19 @@ export default function CalendarPage() {
               </label>
             </div>
             <footer>
+              {editingAppointment && (
+                <button
+                  type="button"
+                  className={styles.deleteAppointment}
+                  disabled={savingAppointment}
+                  onClick={deleteAppointment}
+                >
+                  Excluir compromisso
+                </button>
+              )}
               <button
                 type="button"
+                disabled={savingAppointment}
                 onClick={() => {
                   setShowAppointmentForm(false);
                   setEditingAppointment(null);
