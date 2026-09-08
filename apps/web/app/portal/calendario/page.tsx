@@ -366,9 +366,8 @@ export default function CalendarPage() {
         company_id: selectedClient.companyId,
         created_by: authData.user.id,
         assigned_profile_id:
-          calendar === 'personal'
-            ? selectedClient.profileId || authData.user.id
-            : null,
+          selectedClient.profileId ||
+          (calendar === 'personal' ? authData.user.id : null),
         title,
         theme: 'Compromisso',
         starts_at: startsAt.toISOString(),
