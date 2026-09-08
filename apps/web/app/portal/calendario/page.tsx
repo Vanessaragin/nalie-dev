@@ -37,6 +37,8 @@ type Appointment = {
 
 type ClientChoice = {
   id: string;
+  companyId: string | null;
+  profileId: string | null;
   label: string;
   whatsapp: string;
   email: string;
@@ -157,26 +159,38 @@ export default function CalendarPage() {
     async function loadCalendar() {
       try {
         const supabase = createClient({ detectSessionInUrl: false });
-        const [companiesResult, crmResult, eventsResult] = await Promise.all([
-          supabase
-            .from('companies')
-            .select('id,display_name,status')
-            .eq('status', 'ACTIVE')
-            .order('display_name'),
-          supabase
-            .from('client_crm')
-            .select(
-              'company_id,contact_name,contact_email,contact_phone,whatsapp,client_status',
-            ),
-          supabase
-            .from('calendar_events')
-            .select(
-              'id,company_id,title,starts_at,ends_at,suggested_agenda,priority,scope',
-            )
-            .order('starts_at', { ascending: true }),
-        ]);
-        if (companiesResult.error || crmResult.error || eventsResult.error)
-          throw companiesResult.error ?? crmResult.error ?? eventsResult.error;
+        const [companiesResult, crmResult, profilesResult, eventsResult] =
+          await Promise.all([
+            supabase
+              .from('companies')
+              .select('id,display_name,status')
+              .eq('status', 'ACTIVE')
+              .order('display_name'),
+            supabase
+              .from('client_crm')
+              .select(
+                'company_id,contact_name,contact_email,contact_phone,whatsapp,client_status',
+              ),
+            supabase.rpc('list_calendar_admin_profiles'),
+            supabase
+              .from('calendar_events')
+              .select(
+                'id,company_id,assigned_profile_id,title,starts_at,ends_at,suggested_agenda,priority,scope',
+              )
+              .order('starts_at', { ascending: true }),
+          ]);
+        if (
+          companiesResult.error ||
+          crmResult.error ||
+          profilesResult.error ||
+          eventsResult.error
+        )
+          throw (
+            companiesResult.error ??
+            crmResult.error ??
+            profilesResult.error ??
+            eventsResult.error
+          );
 
         const crmByCompany = new Map(
           (crmResult.data ?? []).map((row) => [row.company_id, row]),
@@ -185,16 +199,40 @@ export default function CalendarPage() {
           const crm = crmByCompany.get(company.id);
           return {
             id: company.id,
+            companyId: company.id,
+            profileId: null,
             label: String(crm?.contact_name || company.display_name),
             whatsapp: String(crm?.whatsapp || crm?.contact_phone || ''),
             email: String(crm?.contact_email || ''),
           };
         });
+        const administratorChoices = (profilesResult.data ?? []).map(
+          (profile: {
+            profile_id: string;
+            display_name: string;
+            email: string;
+          }) => ({
+            id: `profile:${profile.profile_id}`,
+            companyId: null,
+            profileId: String(profile.profile_id),
+            label: `${profile.display_name} · ${profile.email}`,
+            whatsapp: '',
+            email: String(profile.email),
+          }),
+        );
+        choices.unshift(...administratorChoices);
         const choiceById = new Map(
-          choices.map((choice) => [choice.id, choice]),
+          choices.flatMap((choice) => {
+            const keys = [choice.id];
+            if (choice.companyId) keys.push(choice.companyId);
+            if (choice.profileId) keys.push(choice.profileId);
+            return keys.map((key) => [key, choice] as const);
+          }),
         );
         const mappedEvents = (eventsResult.data ?? []).flatMap((row) => {
-          const choice = choiceById.get(row.company_id);
+          const choice = choiceById.get(
+            String(row.company_id || row.assigned_profile_id || ''),
+          );
           if (!choice) return [];
           const startsAt = new Date(String(row.starts_at));
           const date = `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, '0')}-${String(startsAt.getDate()).padStart(2, '0')}`;
@@ -213,7 +251,7 @@ export default function CalendarPage() {
               appointment: {
                 id: String(row.id),
                 sourceId: String(row.id),
-                companyId: String(row.company_id),
+                companyId: choice.id,
                 date,
                 day: startsAt.getDate(),
                 time: startsAt.toLocaleTimeString('pt-BR', {
@@ -325,9 +363,12 @@ export default function CalendarPage() {
       if (authError || !authData.user)
         throw authError ?? new Error('Sessão inválida');
       const values = {
-        company_id: clientId,
+        company_id: selectedClient.companyId,
         created_by: authData.user.id,
-        assigned_profile_id: calendar === 'personal' ? authData.user.id : null,
+        assigned_profile_id:
+          calendar === 'personal'
+            ? selectedClient.profileId || authData.user.id
+            : null,
         title,
         theme: 'Compromisso',
         starts_at: startsAt.toISOString(),
