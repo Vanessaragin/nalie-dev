@@ -400,9 +400,13 @@ export default function CalendarPage() {
       if (error) throw error;
       savedId = String(saved.id);
     } catch (error) {
-      setAppointmentNotice(
-        `Compromisso não salvo: ${error instanceof Error ? error.message : 'o banco recusou os dados'}.`,
-      );
+      const message =
+        error && typeof error === 'object' && 'message' in error
+          ? String(error.message)
+          : error instanceof Error
+            ? error.message
+            : 'o banco recusou os dados';
+      setAppointmentNotice(`Compromisso não salvo: ${message}.`);
       setSavingAppointment(false);
       return;
     }
