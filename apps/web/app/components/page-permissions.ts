@@ -68,6 +68,13 @@ export function useCurrentPagePermissions() {
         if (superAdmin) return apply(all);
         const { data: authData } = await supabase.auth.getUser();
         if (!authData.user) return apply([]);
+        const { data: delegatedClients } = await supabase.rpc(
+          'list_delegated_clients',
+        );
+        const delegated =
+          Array.isArray(delegatedClients) && delegatedClients.length > 0
+            ? ['delegated']
+            : [];
         const { data, error } = await supabase
           .from('company_users')
           .select('access_level,status')
@@ -81,14 +88,17 @@ export function useCurrentPagePermissions() {
             (membership) => membership.access_level === 'COMPLETE',
           )
         )
-          return apply(all.filter((item) => item !== 'super'));
+          return apply([
+            ...all.filter((item) => item !== 'super'),
+            ...delegated,
+          ]);
         if (
           memberships.some(
             (membership) => membership.access_level === 'LIMITED',
           )
         )
-          return apply(limitedPagePermissions);
-        apply([]);
+          return apply([...limitedPagePermissions, ...delegated]);
+        apply(delegated);
       } catch {
         // Em uma troca de página, uma falha transitória não deve apagar um menu
         // que já foi autorizado nesta mesma sessão.

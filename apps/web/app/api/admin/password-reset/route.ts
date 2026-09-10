@@ -40,8 +40,10 @@ export async function POST(request: Request) {
   if (claimsError || !claims?.claims) {
     return NextResponse.json({ error: 'Sessão inválida.' }, { status: 401 });
   }
-  const { data: isOwner, error: ownerError } =
-    await authenticatedClient.rpc('is_super_admin');
+  const { data: isOwner, error: ownerError } = await authenticatedClient.rpc(
+    'can_reset_delegated_user',
+    { target_membership_id: body.membershipId },
+  );
   if (ownerError || !isOwner) {
     return NextResponse.json(
       { error: 'Acesso não autorizado.' },
@@ -91,13 +93,6 @@ export async function POST(request: Request) {
       persistSession: false,
     },
   });
-  const { error } = await recoveryClient.auth.resetPasswordForEmail(email, {
-    redirectTo,
-  });
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 502 });
-  }
-
   const { error: requestError } = await authenticatedClient.rpc(
     'request_company_user_password_reset',
     {
@@ -107,6 +102,13 @@ export async function POST(request: Request) {
   );
   if (requestError) {
     return NextResponse.json({ error: requestError.message }, { status: 500 });
+  }
+
+  const { error } = await recoveryClient.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 502 });
   }
 
   return NextResponse.json({ ok: true });

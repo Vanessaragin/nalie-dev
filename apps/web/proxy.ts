@@ -73,6 +73,23 @@ export async function proxy(request: NextRequest) {
     }
     const { data: superAdmin } = await supabase.rpc('is_super_admin');
     if (!superAdmin) {
+      const authorizedArea = request.nextUrl.pathname === '/portal/autorizados';
+      const { data: delegatedClients } = authorizedArea
+        ? await supabase.rpc('list_delegated_clients')
+        : { data: [] };
+      const delegatedAllowed =
+        authorizedArea &&
+        Array.isArray(delegatedClients) &&
+        delegatedClients.length > 0;
+      if (
+        request.nextUrl.pathname.startsWith('/portal/admin') ||
+        request.nextUrl.pathname.startsWith('/portal/pagamentos') ||
+        (authorizedArea && !delegatedAllowed)
+      ) {
+        return NextResponse.redirect(
+          new URL('/portal/analises?tab=conteudos', request.url),
+        );
+      }
       const userId = String(data?.claims?.sub ?? '');
       const { data: memberships, error: membershipError } = await supabase
         .from('company_users')
@@ -93,7 +110,8 @@ export async function proxy(request: NextRequest) {
       if (
         !hasCompleteAccess &&
         hasLimitedAccess &&
-        !isLimitedRouteAllowed(request.nextUrl.pathname)
+        !isLimitedRouteAllowed(request.nextUrl.pathname) &&
+        !delegatedAllowed
       ) {
         return NextResponse.redirect(
           new URL('/portal/analises?tab=conteudos', request.url),

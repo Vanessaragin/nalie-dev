@@ -163,6 +163,16 @@ export default function PortalNavigation({
         )}
       </div>
 
+      {!isSuper && permissions.includes('delegated') && (
+        <div className={styles.group}>
+          <span className={styles.privateLabel}>ACESSOS AUTORIZADOS</span>
+          <Link href="/portal/autorizados">
+            <i>🤝</i>
+            <span>Administração Geral</span>
+          </Link>
+        </div>
+      )}
+
       {isSuper && (
         <div className={styles.group}>
           <span className={styles.privateLabel}>MINHA ÁREA PRIVADA</span>

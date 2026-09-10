@@ -17,6 +17,8 @@ import {
   money,
 } from './crm-data';
 
+import DelegatedAccess from './delegated-access';
+
 const tabs = [
   'Resumo',
   'Contato',
@@ -26,6 +28,7 @@ const tabs = [
   'Histórico',
   'Materiais',
   'BI e apresentação',
+  'Acessos autorizados',
 ] as const;
 type Tab = (typeof tabs)[number];
 const workflowStages = [
@@ -2429,6 +2432,10 @@ function ClientDetail({
         workflowStages.indexOf(actionStage(b, activityStages));
       return stageDifference || a.dueAt.localeCompare(b.dueAt);
     });
+  if (tab === 'Acessos autorizados')
+    return (
+      <DelegatedAccess key={client.companyId} companyId={client.companyId} />
+    );
   if (tab === 'Resumo')
     return (
       <div className={styles.summary}>
