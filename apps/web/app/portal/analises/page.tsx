@@ -844,39 +844,41 @@ export default function AnalysisWorkspacePage() {
                     </div>
                   )}
                 </article>
-                <article className={styles.excelPanel}>
-                  <div>
-                    <span>📗</span>
-                    <div>
-                      <h2>Planilhas em Excel</h2>
-                      <p>Os arquivos ficam disponíveis somente como links.</p>
+                {[
+                  {
+                    name: selectedCompany.excelName1 || 'Excel 1',
+                    url: selectedCompany.excelUrl1,
+                  },
+                  {
+                    name: selectedCompany.excelName2 || 'Excel 2',
+                    url: selectedCompany.excelUrl2,
+                  },
+                ].map((sheet, index) => (
+                  <article className={styles.sheetCard} key={index}>
+                    <div className={styles.sheetHeader}>
+                      <h2>{sheet.name}</h2>
+                      {sheet.url?.startsWith('https://') && (
+                        <a
+                          href={sheet.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Abrir em nova aba ↗
+                        </a>
+                      )}
                     </div>
-                  </div>
-                  <div className={styles.excelLinks}>
-                    {selectedCompany.excelUrl1 ? (
-                      <a
-                        href={selectedCompany.excelUrl1}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {selectedCompany.excelName1 || 'Excel 1'} ↗
-                      </a>
+                    {sheet.url?.startsWith('https://') ? (
+                      <iframe
+                        className={styles.sheetFrame}
+                        src={embeddableUrl(sheet.url)}
+                        title={sheet.name}
+                        allowFullScreen
+                      />
                     ) : (
-                      <span>Excel 1 · link ainda não configurado</span>
+                      <p>Excel {index + 1} · link ainda não configurado</p>
                     )}
-                    {selectedCompany.excelUrl2 ? (
-                      <a
-                        href={selectedCompany.excelUrl2}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {selectedCompany.excelName2 || 'Excel 2'} ↗
-                      </a>
-                    ) : (
-                      <span>Excel 2 · link ainda não configurado</span>
-                    )}
-                  </div>
-                </article>
+                  </article>
+                ))}
               </>
             )}
           </section>

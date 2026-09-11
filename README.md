@@ -121,3 +121,10 @@ See [security baseline](docs/security/baseline.md).
 - Run the two-company production acceptance procedure documented in
   `docs/operations/production-runbook.md`.
 - Configure production hosting and its rollback procedure.
+
+## Atualização operacional — setembro de 2026
+
+As seções iniciais deste README descrevem a fundação M0. Para o estado atual de
+ADM simples, calendário compartilhado, recuperação de senha e validações, veja
+[Update de 11/09/2026](docs/releases/2026-09-11.md) e o
+[runbook de produção](docs/operations/production-runbook.md).

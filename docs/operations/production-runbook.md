@@ -60,3 +60,10 @@ rastreabilidade.
 Consulte `docs/operations/branding-and-contact.md` para trocar a foto oficial e
 o link “Falar com um especialista”. Apenas a administradora mestre pode alterar
 a foto profissional compartilhada.
+
+## Update de 11/09/2026
+
+Consulte [notas e validações da atualização](../releases/2026-09-11.md).
+A saída atual do build é standalone para Hostinger. O push no GitHub entrega o código;
+a ativação deve ser confirmada no provedor, sem presumir que um push equivale a deploy.
+As migrações m67–m69 já foram aplicadas no Supabase utilizado pelo portal.

@@ -203,14 +203,29 @@ assert.deepEqual(
   scopedActivity.rows[0].value.map((row) => row.title),
   ['Allowed login'],
 );
+await db.exec('reset role');
+await db.exec(
+  await readFile(
+    new URL(
+      '../../supabase/migrations/202609110001_m69_shared_company_calendar.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+);
+await db.exec(`insert into calendar_events(id,company_id,scope,title,assigned_profile_id) values
+('${id(91)}','${company}','COMPANY','Company shared',null),
+('${id(92)}','${company}','PERSONAL','Private unassigned',null),
+('${id(93)}','${company}','COMPANY','Other user', '${outsider}');`);
+await db.exec('set role authenticated');
 const scopedCalendar = await query(
   "select read_simple_admin_user($1,'calendar') as value",
   [targetMembership],
 );
-assert.deepEqual(
-  scopedCalendar.rows[0].value.map((row) => row.title),
-  ['Shared'],
-);
+assert.deepEqual(scopedCalendar.rows[0].value.map((row) => row.title).sort(), [
+  'Company shared',
+  'Shared',
+]);
 assert.equal(
   (await query('select can_reset_delegated_user($1) as value', [id(14)]))
     .rows[0].value,
