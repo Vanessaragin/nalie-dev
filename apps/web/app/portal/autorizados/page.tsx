@@ -49,7 +49,7 @@ export default function AuthorizedClientsPage() {
     let active = true;
     if (!company || !capability) return;
     void createClient()
-      .rpc('read_delegated_client', { target_company: company, capability })
+      .rpc('read_simple_admin_user', { target_membership: company, capability })
       .then(({ data, error }) => {
         if (!active) return;
         setLoading(false);
@@ -102,11 +102,11 @@ export default function AuthorizedClientsPage() {
       <section className={shell.content}>
         <h1>Administração Geral</h1>
         <p>
-          Clientes e funções autorizados pela ADM Master. As consultas e
-          solicitações são registradas na auditoria.
+          Perfil ADM simples · usuários e funções autorizados pelo Super Master.
+          As consultas e solicitações são registradas na auditoria.
         </p>
         <label>
-          Cliente autorizado{' '}
+          Usuário autorizado{' '}
           <select
             value={company}
             onChange={(event) => {
@@ -117,7 +117,7 @@ export default function AuthorizedClientsPage() {
               setLoading(false);
             }}
           >
-            <option value="">Selecione um cliente</option>
+            <option value="">Selecione um usuário</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
                 {client.name}
@@ -125,7 +125,7 @@ export default function AuthorizedClientsPage() {
             ))}
           </select>
         </label>
-        {clients.length === 0 && <p>Nenhum cliente autorizado disponível.</p>}
+        {clients.length === 0 && <p>Nenhum usuário autorizado disponível.</p>}
         <nav className={styles.tabs} aria-label="Funções autorizadas">
           {delegatedCapabilities
             .filter(([key]) => selected?.permissions.includes(key))

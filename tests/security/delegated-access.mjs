@@ -149,6 +149,97 @@ assert.equal(
   audit.rows.filter((row) => row.action === 'PASSWORD_RESET_REQUESTED').length,
   1,
 );
+// Exercise the outgoing, per-user configuration, including two users of one company.
+await db.exec(`alter table calendar_events add column assigned_profile_id uuid;
+update calendar_events set assigned_profile_id='${client}';
+insert into company_users values ('${id(14)}','${outsider}','${company}','${id(9)}','ACTIVE','COMPLETE');
+insert into client_activities(company_id,profile_id,kind,title) values ('${company}','${client}','LOGIN','Allowed login'),('${company}','${outsider}','LOGIN','Other login');
+`);
+await db.exec(
+  await readFile(
+    new URL(
+      '../../supabase/migrations/202609100001_m68_simple_admin_user_selection.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  ),
+);
+await as(master);
+const selectedUsers = [
+  {
+    membershipId: targetMembership,
+    permissions: ['calendar', 'activity', 'password_reset'],
+  },
+  { membershipId: id(14), permissions: ['crm'] },
+];
+await query('select set_simple_admin_access($1,$2::jsonb)', [
+  delegate,
+  JSON.stringify(selectedUsers),
+]);
+await denied('select set_simple_admin_access($1,$2::jsonb)', [
+  delegate,
+  JSON.stringify([{ membershipId: ownMembership, permissions: ['crm'] }]),
+]);
+await denied('select set_simple_admin_access($1,$2::jsonb)', [
+  delegate,
+  JSON.stringify([{ membershipId: id(11), permissions: ['crm'] }]),
+]);
+await denied('select set_simple_admin_access($1,$2::jsonb)', [master, '[]']);
+await as(delegate);
+await denied('select set_simple_admin_access($1,$2::jsonb)', [delegate, '[]']);
+assert.equal(
+  (await query('select list_delegated_clients() as value')).rows[0].value
+    .length,
+  2,
+);
+await denied("select read_simple_admin_user($1,'calendar')", [id(14)]);
+await denied("select read_simple_admin_user($1,'crm')", [targetMembership]);
+await denied("select read_delegated_client($1,'crm')", [company]);
+const scopedActivity = await query(
+  "select read_simple_admin_user($1,'activity') as value",
+  [targetMembership],
+);
+assert.deepEqual(
+  scopedActivity.rows[0].value.map((row) => row.title),
+  ['Allowed login'],
+);
+const scopedCalendar = await query(
+  "select read_simple_admin_user($1,'calendar') as value",
+  [targetMembership],
+);
+assert.deepEqual(
+  scopedCalendar.rows[0].value.map((row) => row.title),
+  ['Shared'],
+);
+assert.equal(
+  (await query('select can_reset_delegated_user($1) as value', [id(14)]))
+    .rows[0].value,
+  false,
+);
+assert.equal(
+  (await query('select can_reset_delegated_user($1) as value', [ownMembership]))
+    .rows[0].value,
+  false,
+);
+assert.equal(
+  (
+    await query('select can_reset_delegated_user($1) as value', [
+      targetMembership,
+    ])
+  ).rows[0].value,
+  true,
+);
+await as(master);
+await query('select set_simple_admin_access($1,$2::jsonb)', [delegate, '[]']);
+await as(delegate);
+assert.equal(
+  (await query('select list_delegated_clients() as value')).rows[0].value
+    .length,
+  0,
+);
+await denied("select read_simple_admin_user($1,'activity')", [
+  targetMembership,
+]);
 await db.close();
 console.log(
   'PASS: delegation, isolation, explicit capabilities, private calendars, self reset, revocation, RLS and audit',

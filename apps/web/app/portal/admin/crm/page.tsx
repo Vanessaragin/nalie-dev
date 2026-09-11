@@ -362,7 +362,7 @@ export default function CrmPage() {
           supabase
             .from('company_users')
             .select(
-              'id,company_id,profile_id,access_level,profiles(display_name,public_email)',
+              'id,company_id,profile_id,access_level,profiles!company_users_profile_id_fkey(display_name,public_email)',
             ),
           supabase
             .from('company_analysis_links')
@@ -2434,7 +2434,11 @@ function ClientDetail({
     });
   if (tab === 'Acessos autorizados')
     return (
-      <DelegatedAccess key={client.companyId} companyId={client.companyId} />
+      <DelegatedAccess
+        key={client.companyId}
+        name={client.name}
+        accounts={client.portalUsers}
+      />
     );
   if (tab === 'Resumo')
     return (
