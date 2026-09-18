@@ -35,7 +35,11 @@ type AnalysisCompany = {
   excelName1?: string;
   excelUrl1?: string;
   excelName2?: string;
+  pdfName1?: string;
+  pdfName2?: string;
   excelUrl2?: string;
+  pdfUrl1?: string;
+  pdfUrl2?: string;
   contentAccess?: 'Empresa' | 'Restrito';
 };
 
@@ -228,7 +232,11 @@ export default function AnalysisWorkspacePage() {
             excelName1: find('EXCEL_1')?.display_name ?? '',
             excelUrl1: find('EXCEL_1')?.source_url ?? '',
             excelName2: find('EXCEL_2')?.display_name ?? '',
+            pdfName1: find('PDF_1')?.display_name ?? '',
+            pdfName2: find('PDF_2')?.display_name ?? '',
             excelUrl2: find('EXCEL_2')?.source_url ?? '',
+            pdfUrl1: find('PDF_1')?.source_url ?? '',
+            pdfUrl2: find('PDF_2')?.source_url ?? '',
             contentAccess: companyLinks.some(
               (link) => link.access_scope === 'RESTRICTED',
             )
@@ -853,6 +861,14 @@ export default function AnalysisWorkspacePage() {
                     name: selectedCompany.excelName2 || 'Excel 2',
                     url: selectedCompany.excelUrl2,
                   },
+                  {
+                    name: selectedCompany.pdfName1 || 'PDF 1',
+                    url: selectedCompany.pdfUrl1,
+                  },
+                  {
+                    name: selectedCompany.pdfName2 || 'PDF 2',
+                    url: selectedCompany.pdfUrl2,
+                  },
                 ].map((sheet, index) => (
                   <article className={styles.sheetCard} key={index}>
                     <div className={styles.sheetHeader}>
@@ -875,7 +891,10 @@ export default function AnalysisWorkspacePage() {
                         allowFullScreen
                       />
                     ) : (
-                      <p>Excel {index + 1} · link ainda não configurado</p>
+                      <p>
+                        {index < 2 ? `Excel ${index + 1}` : `PDF ${index - 1}`}{' '}
+                        · link ainda não configurado
+                      </p>
                     )}
                   </article>
                 ))}

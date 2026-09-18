@@ -141,6 +141,16 @@ async function persistAnalysisLinks(client: CrmClient, form: FormData) {
       String(form.get('excelName2')).trim() || 'Excel 2',
       String(form.get('excelUrl2')),
     ],
+    [
+      'PDF_1',
+      String(form.get('pdfName1') ?? '').trim() || 'PDF 1',
+      String(form.get('pdfUrl1') ?? ''),
+    ],
+    [
+      'PDF_2',
+      String(form.get('pdfName2') ?? '').trim() || 'PDF 2',
+      String(form.get('pdfUrl2') ?? ''),
+    ],
   ] as const;
   const configured = entries.filter(([, , url]) => url.trim());
   if (configured.length) {
@@ -456,7 +466,11 @@ export default function CrmPage() {
               excelName1: byType('EXCEL_1')?.display_name ?? '',
               excelUrl1: byType('EXCEL_1')?.source_url ?? '',
               excelName2: byType('EXCEL_2')?.display_name ?? '',
+              pdfName1: byType('PDF_1')?.display_name ?? '',
+              pdfName2: byType('PDF_2')?.display_name ?? '',
               excelUrl2: byType('EXCEL_2')?.source_url ?? '',
+              pdfUrl1: byType('PDF_1')?.source_url ?? '',
+              pdfUrl2: byType('PDF_2')?.source_url ?? '',
               contentAccess: links.some(
                 (link) => link.access_scope === 'RESTRICTED',
               )
@@ -886,7 +900,11 @@ export default function CrmPage() {
       excelName1: editingClient && selected ? (selected.excelName1 ?? '') : '',
       excelUrl1: editingClient && selected ? (selected.excelUrl1 ?? '') : '',
       excelName2: editingClient && selected ? (selected.excelName2 ?? '') : '',
+      pdfName1: editingClient && selected ? (selected.pdfName1 ?? '') : '',
+      pdfName2: editingClient && selected ? (selected.pdfName2 ?? '') : '',
       excelUrl2: editingClient && selected ? (selected.excelUrl2 ?? '') : '',
+      pdfUrl1: editingClient && selected ? (selected.pdfUrl1 ?? '') : '',
+      pdfUrl2: editingClient && selected ? (selected.pdfUrl2 ?? '') : '',
       contentAccess:
         editingClient && selected
           ? (selected.contentAccess ?? 'Empresa')
@@ -2785,7 +2803,11 @@ function ClientDetail({
                       excelName1: String(form.get('excelName1')).trim(),
                       excelUrl1: String(form.get('excelUrl1')),
                       excelName2: String(form.get('excelName2')).trim(),
+                      pdfName1: String(form.get('pdfName1')).trim(),
+                      pdfName2: String(form.get('pdfName2')).trim(),
                       excelUrl2: String(form.get('excelUrl2')),
+                      pdfUrl1: String(form.get('pdfUrl1')),
+                      pdfUrl2: String(form.get('pdfUrl2')),
                       contentAccess: String(form.get('contentAccess')) as
                         | 'Empresa'
                         | 'Restrito',
@@ -2857,6 +2879,40 @@ function ClientDetail({
             />
           </label>
           <label>
+            Nome visível do PDF 1
+            <input
+              name="pdfName1"
+              defaultValue={client.pdfName1 ?? ''}
+              placeholder="Ex.: Relatório em PDF"
+            />
+          </label>
+          <label>
+            Link do PDF 1
+            <input
+              name="pdfUrl1"
+              type="url"
+              defaultValue={client.pdfUrl1 ?? ''}
+              placeholder="https://..."
+            />
+          </label>
+          <label>
+            Nome visível do PDF 2
+            <input
+              name="pdfName2"
+              defaultValue={client.pdfName2 ?? ''}
+              placeholder="Ex.: Relatório em PDF"
+            />
+          </label>
+          <label>
+            Link do PDF 2
+            <input
+              name="pdfUrl2"
+              type="url"
+              defaultValue={client.pdfUrl2 ?? ''}
+              placeholder="https://..."
+            />
+          </label>
+          <label>
             Acesso ao conteúdo
             <select
               name="contentAccess"
@@ -2870,7 +2926,7 @@ function ClientDetail({
               </option>
             </select>
             <small>
-              Esta regra controla somente BI, PowerPoint e Excel. No modo
+              Esta regra controla somente BI, PowerPoint, Excel e PDF. No modo
               restrito, o usuário também precisa ter “Análise · BI e
               apresentações” liberado em suas permissões individuais.
             </small>

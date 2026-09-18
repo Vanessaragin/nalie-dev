@@ -53,7 +53,11 @@ export type CrmClient = {
   excelName1: string;
   excelUrl1: string;
   excelName2: string;
+  pdfName1: string;
+  pdfName2: string;
   excelUrl2: string;
+  pdfUrl1: string;
+  pdfUrl2: string;
   contentAccess: 'Empresa' | 'Restrito';
   owner: string;
   createdAt: string;
