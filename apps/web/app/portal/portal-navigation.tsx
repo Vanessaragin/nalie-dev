@@ -63,6 +63,7 @@ const moreLinks: NavigationItem[] = [
 ];
 
 const adminLinks: NavigationItem[] = [
+  { icon: '📝', label: 'Mural privado', href: '/portal/admin/mural' },
   { icon: '👑', label: 'Painel administrativo', href: '/portal/admin' },
   { icon: '🤝', label: 'Contatos / Clientes CRM', href: '/portal/admin/crm' },
   { icon: '💳', label: 'Pagamentos dos serviços', href: '/portal/pagamentos' },
