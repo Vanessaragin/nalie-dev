@@ -5,7 +5,9 @@ const next = require('next');
 const kingHostPort = Object.entries(process.env).find(
   ([name, value]) => name.startsWith('PORT_') && /^\d+$/.test(value || ''),
 )?.[1];
-const port = Number(process.env.PORT_SERVER || process.env.PORT || kingHostPort || 3000);
+const port = Number(
+  process.env.PORT_SERVER || process.env.PORT || kingHostPort || 3000,
+);
 // Bind to every network interface so KingHost's reverse proxy can reach the app.
 // The platform-provided HOSTNAME identifies the machine and must not be used as
 // the listening address because the proxy may connect through localhost.

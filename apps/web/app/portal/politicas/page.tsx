@@ -13,7 +13,6 @@ import CompanySwitcher, {
 import { useCurrentPagePermissions } from '../../components/page-permissions';
 import { createClient } from '../../../lib/supabase/client';
 
-
 export default function PoliciesPage() {
   const canEdit = useCurrentPagePermissions().includes('super');
   const [editing, setEditing] = useState(false);
@@ -39,7 +38,9 @@ export default function PoliciesPage() {
       setCompanyId(selected);
       if (!selected) return;
       try {
-        const { data, error } = await createClient({ detectSessionInUrl: false })
+        const { data, error } = await createClient({
+          detectSessionInUrl: false,
+        })
           .from('company_settings')
           .select('policies')
           .eq('company_id', selected)
@@ -62,7 +63,8 @@ export default function PoliciesPage() {
     }
     const timer = window.setTimeout(() => void load(), 250);
     const changed = (event: Event) => {
-      const id = (event as CustomEvent<{ companyId: string }>).detail?.companyId;
+      const id = (event as CustomEvent<{ companyId: string }>).detail
+        ?.companyId;
       void load(id);
     };
     window.addEventListener(SELECTED_COMPANY_EVENT, changed);
@@ -144,7 +146,11 @@ export default function PoliciesPage() {
             ✓ Políticas atualizadas. Versão {version}.
           </p>
         )}
-        {feedback && <p className={styles.savedNotice} role="status">{feedback}</p>}
+        {feedback && (
+          <p className={styles.savedNotice} role="status">
+            {feedback}
+          </p>
+        )}
         {canEdit && editing && (
           <form className={styles.policyEditor} onSubmit={savePolicies}>
             <header>

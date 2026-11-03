@@ -37,7 +37,10 @@ export async function PATCH(request: Request) {
   const { data: isOwner, error: ownerError } =
     await authenticatedClient.rpc('is_super_admin');
   if (ownerError || !isOwner) {
-    return NextResponse.json({ error: 'Acesso não autorizado.' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Acesso não autorizado.' },
+      { status: 403 },
+    );
   }
 
   const adminClient = createClient(url, serviceRoleKey, {

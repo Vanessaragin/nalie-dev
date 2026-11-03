@@ -48,8 +48,7 @@ export default function ServiceFinancePage() {
           .select('pix_key')
           .eq('id', 'nalie-main')
           .maybeSingle();
-        if (active)
-          setPixKey(data?.pix_key || 'Chave PIX não cadastrada');
+        if (active) setPixKey(data?.pix_key || 'Chave PIX não cadastrada');
       } catch {
         if (active) setPixKey('Chave PIX não cadastrada');
       }
@@ -79,9 +78,7 @@ export default function ServiceFinancePage() {
           .eq('id', 'nalie-main')
           .maybeSingle();
         if (!active) return;
-        setPixKey(
-          brandingResult.data?.pix_key || 'Chave PIX não cadastrada',
-        );
+        setPixKey(brandingResult.data?.pix_key || 'Chave PIX não cadastrada');
         const { data: companyId } = await supabase.rpc('current_company_id');
         if (!companyId) return;
         const paymentsResult = await supabase

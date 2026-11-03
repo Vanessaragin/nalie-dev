@@ -31,7 +31,9 @@ export default function SettingsPage() {
 
   const loadMembers = useCallback(async (requestedCompanyId?: string) => {
     const selected =
-      requestedCompanyId || window.localStorage.getItem(SELECTED_COMPANY_KEY) || '';
+      requestedCompanyId ||
+      window.localStorage.getItem(SELECTED_COMPANY_KEY) ||
+      '';
     setCompanyId(selected);
     if (!selected) {
       setMembers([]);
@@ -49,7 +51,9 @@ export default function SettingsPage() {
       if (error) throw error;
       setMembers(
         (data ?? []).map((row) => {
-          const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          const profile = Array.isArray(row.profiles)
+            ? row.profiles[0]
+            : row.profiles;
           const role = Array.isArray(row.roles) ? row.roles[0] : row.roles;
           return {
             id: row.id,
@@ -74,7 +78,8 @@ export default function SettingsPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => void loadMembers(), 250);
     const changed = (event: Event) => {
-      const id = (event as CustomEvent<{ companyId: string }>).detail?.companyId;
+      const id = (event as CustomEvent<{ companyId: string }>).detail
+        ?.companyId;
       void loadMembers(id);
     };
     window.addEventListener(SELECTED_COMPANY_EVENT, changed);
@@ -87,7 +92,9 @@ export default function SettingsPage() {
   async function changeAccess(member: Member, access: Member['access']) {
     const previous = member.access;
     setMembers((current) =>
-      current.map((item) => (item.id === member.id ? { ...item, access } : item)),
+      current.map((item) =>
+        item.id === member.id ? { ...item, access } : item,
+      ),
     );
     try {
       const { error } = await createClient({ detectSessionInUrl: false }).rpc(
@@ -123,32 +130,127 @@ export default function SettingsPage() {
     }
   }
 
-  const activeCount = members.filter((member) => member.status === 'ACTIVE').length;
+  const activeCount = members.filter(
+    (member) => member.status === 'ACTIVE',
+  ).length;
   return (
     <main className={shell.portal}>
       <aside className={shell.sidebar}>
         <MenuToggle />
-        <div className={shell.brand}><span>N</span><div><b>NALIE</b><small>BUSINESS INTELLIGENCE</small></div></div>
+        <div className={shell.brand}>
+          <span>N</span>
+          <div>
+            <b>NALIE</b>
+            <small>BUSINESS INTELLIGENCE</small>
+          </div>
+        </div>
         <CompanySwitcher className={shell.company} />
         <PortalNavigation />
         <AccessLegend />
       </aside>
       <section className={`${shell.content} ${styles.content}`}>
-        <header><div><h1>Empresa e usuários</h1><p>Gerencie os usuários reais da empresa selecionada.</p></div><div className={shell.filters}><Link className={shell.import} href="/portal/perfil">👤 Meu perfil</Link></div></header>
-        <section className={styles.scope}><span>👥</span><div><b>Acesso ao portal</b><p><strong>Completo</strong> libera os módulos contratados. <strong>Limitado</strong> libera somente Análise, Calendário e Mais informações. <strong>Bloqueado</strong> impede o login no portal.</p><p>Somente a administradora geral pode mudar o nível de acesso.</p></div></section>
+        <header>
+          <div>
+            <h1>Empresa e usuários</h1>
+            <p>Gerencie os usuários reais da empresa selecionada.</p>
+          </div>
+          <div className={shell.filters}>
+            <Link className={shell.import} href="/portal/perfil">
+              👤 Meu perfil
+            </Link>
+          </div>
+        </header>
+        <section className={styles.scope}>
+          <span>👥</span>
+          <div>
+            <b>Acesso ao portal</b>
+            <p>
+              <strong>Completo</strong> libera os módulos contratados.{' '}
+              <strong>Limitado</strong> libera somente Análise, Calendário e
+              Mais informações. <strong>Bloqueado</strong> impede o login no
+              portal.
+            </p>
+            <p>Somente a administradora geral pode mudar o nível de acesso.</p>
+          </div>
+        </section>
         <section className={styles.card}>
-          <div className={styles.count}><span>Usuários ativos nesta empresa</span><strong>{activeCount}</strong><small>Usuários inativos não entram na contagem e seus dados permanecem preservados.</small></div>
-          {loading ? <p>Carregando usuários…</p> : members.length === 0 ? <p>Nenhum usuário encontrado para a empresa selecionada.</p> : members.map((member) => (
-            <div className={styles.user} key={member.id}>
-              <span>{member.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span>
-              <div><b>{member.name}</b><small>{member.role} · {member.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}</small></div>
-              <label className={styles.accessSelect}>Acesso<select aria-label={`Acesso de ${member.name}`} value={member.access} disabled={!isOwner} onChange={(event) => void changeAccess(member, event.target.value as Member['access'])}><option value="COMPLETE">Completo</option><option value="LIMITED">Limitado</option><option value="BLOCKED">Bloqueado</option></select></label>
-              {member.role === 'Usuário adicional' && <button className={member.status === 'ACTIVE' ? styles.deactivate : styles.activate} onClick={() => void toggleStatus(member)}>{member.status === 'ACTIVE' ? 'Inativar usuário' : 'Reativar usuário'}</button>}
-              <em>{member.status === 'ACTIVE' ? 'ATIVO' : 'INATIVO'}</em>
+          <div className={styles.count}>
+            <span>Usuários ativos nesta empresa</span>
+            <strong>{activeCount}</strong>
+            <small>
+              Usuários inativos não entram na contagem e seus dados permanecem
+              preservados.
+            </small>
+          </div>
+          {loading ? (
+            <p>Carregando usuários…</p>
+          ) : members.length === 0 ? (
+            <p>Nenhum usuário encontrado para a empresa selecionada.</p>
+          ) : (
+            members.map((member) => (
+              <div className={styles.user} key={member.id}>
+                <span>
+                  {member.name
+                    .split(/\s+/)
+                    .map((part) => part[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase()}
+                </span>
+                <div>
+                  <b>{member.name}</b>
+                  <small>
+                    {member.role} ·{' '}
+                    {member.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
+                  </small>
+                </div>
+                <label className={styles.accessSelect}>
+                  Acesso
+                  <select
+                    aria-label={`Acesso de ${member.name}`}
+                    value={member.access}
+                    disabled={!isOwner}
+                    onChange={(event) =>
+                      void changeAccess(
+                        member,
+                        event.target.value as Member['access'],
+                      )
+                    }
+                  >
+                    <option value="COMPLETE">Completo</option>
+                    <option value="LIMITED">Limitado</option>
+                    <option value="BLOCKED">Bloqueado</option>
+                  </select>
+                </label>
+                {member.role === 'Usuário adicional' && (
+                  <button
+                    className={
+                      member.status === 'ACTIVE'
+                        ? styles.deactivate
+                        : styles.activate
+                    }
+                    onClick={() => void toggleStatus(member)}
+                  >
+                    {member.status === 'ACTIVE'
+                      ? 'Inativar usuário'
+                      : 'Reativar usuário'}
+                  </button>
+                )}
+                <em>{member.status === 'ACTIVE' ? 'ATIVO' : 'INATIVO'}</em>
+              </div>
+            ))
+          )}
+          <div className={styles.actions}>
+            <p>
+              Não existe opção de excluir. Inativar suspende o acesso e preserva
+              todo o histórico.
+            </p>
+          </div>
+          {feedback && (
+            <div className={styles.saved} role="status">
+              {feedback}
             </div>
-          ))}
-          <div className={styles.actions}><p>Não existe opção de excluir. Inativar suspende o acesso e preserva todo o histórico.</p></div>
-          {feedback && <div className={styles.saved} role="status">{feedback}</div>}
+          )}
         </section>
       </section>
     </main>
