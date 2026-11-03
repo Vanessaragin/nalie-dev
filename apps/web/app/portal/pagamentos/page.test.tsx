@@ -11,7 +11,9 @@ describe('PaymentsPage', () => {
     expect(
       screen.getByText('Vencimento não apaga o acesso ao histórico'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Nenhuma cobrança encontrada neste cliente e período.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Nenhuma cobrança encontrada neste cliente e período.'),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('R$ 0,00')).toHaveLength(4);
   });
 });

@@ -34,7 +34,10 @@ let authUser;
 let invitationSent = false;
 let page = 1;
 while (!authUser) {
-  const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+  const { data, error } = await supabase.auth.admin.listUsers({
+    page,
+    perPage: 100,
+  });
   if (error) throw error;
   authUser = data.users.find((user) => user.email?.toLowerCase() === email);
   if (authUser || data.users.length < 100) break;
@@ -64,7 +67,8 @@ const { data: role, error: roleError } = await supabase
   .select('id')
   .eq('code', 'SUPER_ADMIN')
   .single();
-if (roleError || !role) throw roleError ?? new Error('Perfil SUPER_ADMIN ausente.');
+if (roleError || !role)
+  throw roleError ?? new Error('Perfil SUPER_ADMIN ausente.');
 
 const { data: membership, error: membershipError } = await supabase
   .from('company_users')
@@ -93,15 +97,18 @@ if (membershipId) {
     })
     .select('id')
     .single();
-  if (error || !data) throw error ?? new Error('Vínculo administrativo não criado.');
+  if (error || !data)
+    throw error ?? new Error('Vínculo administrativo não criado.');
   membershipId = data.id;
 }
 
-console.log(JSON.stringify({
-  ok: true,
-  invitationSent,
-  authUserId: authUser.id,
-  membershipId,
-  companyId: null,
-  role: 'SUPER_ADMIN',
-}));
+console.log(
+  JSON.stringify({
+    ok: true,
+    invitationSent,
+    authUserId: authUser.id,
+    membershipId,
+    companyId: null,
+    role: 'SUPER_ADMIN',
+  }),
+);

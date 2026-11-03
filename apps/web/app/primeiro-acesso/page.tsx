@@ -44,7 +44,9 @@ export default function FirstAccessPage() {
         // the single-use Supabase token.
         if (confirmToken) {
           setConfirmationToken(confirmToken);
-          setConfirmationType(confirmType === 'recovery' ? 'recovery' : 'invite');
+          setConfirmationType(
+            confirmType === 'recovery' ? 'recovery' : 'invite',
+          );
           return;
         }
         const supabase = createClient({ detectSessionInUrl: false });
@@ -183,11 +185,15 @@ export default function FirstAccessPage() {
                 ? 'Escolha sua senha pessoal para concluir o primeiro acesso.'
                 : confirmationToken
                   ? 'Confirme abaixo para validar seu convite e criar sua senha.'
-                : 'O acesso para criar a senha deve ser aberto pelo link recebido por e-mail.'}
+                  : 'O acesso para criar a senha deve ser aberto pelo link recebido por e-mail.'}
             </p>
             {confirmationToken ? (
               <div>
-                <button type="button" disabled={loading} onClick={confirmAccess}>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={confirmAccess}
+                >
                   {loading ? 'Validando…' : 'Continuar e criar minha senha'}
                 </button>
                 {message && <p role="alert">{message}</p>}

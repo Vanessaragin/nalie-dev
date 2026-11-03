@@ -9,7 +9,9 @@ describe('CalendarPage', () => {
       screen.getByRole('heading', { name: 'Calendário' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Nenhum compromisso corresponde ao cliente, prioridade e dia/),
+      screen.getByText(
+        /Nenhum compromisso corresponde ao cliente, prioridade e dia/,
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText('Revisão financeira')).not.toBeInTheDocument();
   });

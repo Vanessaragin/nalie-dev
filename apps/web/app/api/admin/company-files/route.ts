@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createHash, randomUUID } from 'crypto';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
@@ -14,6 +14,18 @@ const allowedTypes = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/octet-stream',
 ]);
+
+async function hasCompanyPermission(
+  client: SupabaseClient,
+  companyId: string,
+  permissionCode: 'documents.read' | 'documents.write',
+) {
+  const { data, error } = await client.rpc('has_company_permission', {
+    target_company_id: companyId,
+    permission_code: permissionCode,
+  });
+  return !error && data === true;
+}
 
 export async function GET(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -48,6 +60,18 @@ export async function GET(request: Request) {
   const allCompanies = Boolean(isAdministrator && !companyId);
   if (!allCompanies && !/^[0-9a-f-]{36}$/i.test(companyId))
     return NextResponse.json({ documents: [] });
+  if (
+    !isAdministrator &&
+    !(await hasCompanyPermission(
+      authenticatedClient,
+      companyId,
+      'documents.read',
+    ))
+  )
+    return NextResponse.json(
+      { error: 'Acesso não autorizado.' },
+      { status: 403 },
+    );
 
   const admin = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -164,6 +188,18 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: 'Selecione a empresa que receberá o arquivo.' },
       { status: 400 },
+    );
+  if (
+    !isAdministrator &&
+    !(await hasCompanyPermission(
+      authenticatedClient,
+      companyId,
+      'documents.write',
+    ))
+  )
+    return NextResponse.json(
+      { error: 'Acesso não autorizado.' },
+      { status: 403 },
     );
   if (file.size === 0 || file.size > MAX_FILE_SIZE)
     return NextResponse.json(
